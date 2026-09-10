@@ -42,14 +42,16 @@ public class SecurityConfig {
     }
 
     /**
-     * Orígenes de los dos frontends en desarrollo local (Vite): 5174 es el de campo, ya
-     * conectado; 5173 es el del panel administrativo, todavía sin consumir la API pero
-     * habilitado de una vez para no repetir este cableado.
+     * Orígenes de los dos frontends en desarrollo local (Vite): 5174 es el de campo y
+     * 5173 el panel administrativo. Se aceptan localhost y 127.0.0.1 porque el navegador
+     * integrado de Codex suele abrir los servidores locales con la IP loopback.
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuracion = new CorsConfiguration();
-        configuracion.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:5174"));
+        configuracion.setAllowedOrigins(List.of(
+                "http://localhost:5173", "http://localhost:5174",
+                "http://127.0.0.1:5173", "http://127.0.0.1:5174"));
         configuracion.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuracion.setAllowedHeaders(List.of("Authorization", "Content-Type"));
 
