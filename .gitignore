@@ -10,6 +10,7 @@ dist/
 frontend-admin/dist/
 frontend-campo/dist/
 .vite/
+*.tsbuildinfo
 
 # Env y secretos
 .env
