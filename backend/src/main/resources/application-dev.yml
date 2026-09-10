@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5434/clickclak
+    username: clickclak
+    password: clickclak
+  jpa:
+    show-sql: true
+
+clickclak:
+  seguridad:
+    jwt:
+      # Secreto de DESARROLLO únicamente — nunca usar este valor fuera de esta máquina.
+      secret: "clickclak-desarrollo-clave-hmac-no-usar-en-produccion-cambiar-siempre"

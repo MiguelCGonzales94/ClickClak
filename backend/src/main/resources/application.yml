@@ -1,0 +1,35 @@
+spring:
+  application:
+    name: clickclak-backend
+  profiles:
+    active: dev
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+clickclak:
+  seguridad:
+    jwt:
+      expiracion-minutos: 480 # 8h: la app de campo opera con conectividad limitada,
+                               # forzar re-login frecuente perjudicaría el uso offline.
+    webauthn:
+      # rp-id debe ser el dominio efectivo del frontend de campo (sin esquema ni puerto);
+      # "localhost" funciona como caso especial de los navegadores para desarrollo local.
+      rp-id: ${WEBAUTHN_RP_ID:localhost}
+      rp-name: ClickClak
+      # Orígenes exactos (con esquema y puerto) desde los que se permite completar la
+      # ceremonia WebAuthn — no confundir con rp-id, que es solo el dominio.
+      origenes: ${WEBAUTHN_ORIGENES:http://localhost:5174}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized

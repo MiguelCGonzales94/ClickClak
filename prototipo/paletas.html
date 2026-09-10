@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ClickClak — Comparación de paletas</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #F4F6FB;
+    color: #1A2233;
+    padding: 40px 24px;
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .intro { color: #6B7387; font-size: 14px; margin: 0 0 32px; max-width: 640px; }
+  .options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+    max-width: 1100px;
+  }
+  .option {
+    background: #fff;
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 8px 24px rgba(20,30,70,0.08);
+  }
+  .option--recommended { outline: 2px solid #12B3A6; outline-offset: -2px; }
+  .option__badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    color: #12B3A6;
+    background: #E6F8F6;
+    padding: 3px 8px;
+    border-radius: 999px;
+    margin-bottom: 8px;
+  }
+  .option__title { font-size: 16px; font-weight: 700; margin: 0 0 2px; }
+  .option__note { font-size: 12px; color: #6B7387; margin: 0 0 16px; }
+
+  .row-label { font-size: 11px; font-weight: 700; color: #6B7387; text-transform: uppercase; letter-spacing: .04em; margin: 14px 0 6px; }
+  .swatch-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .swatch {
+    width: 64px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: #6B7387;
+  }
+  .swatch__chip { width: 100%; height: 40px; border-radius: 8px; border: 1px solid rgba(0,0,0,.06); }
+
+  .preview-btns { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .preview-btn {
+    height: 36px; padding: 0 14px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: default;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Paletas de color — ClickClak</h1>
+  <p class="intro">Tres direcciones para comparar. Cada una incluye color primario, acento de marca, neutrales y colores semánticos para los estados de incidencia (Registrada / En revisión / Aprobada / Rechazada).</p>
+
+  <div class="options">
+
+    <div class="option option--recommended">
+      <span class="option__badge">Recomendada</span>
+      <p class="option__title">A · Corporate Trust</p>
+      <p class="option__note">Azul institucional + acento teal. Ya aplicada en login.html. Transmite confianza y encaja con software empresarial — favorable de cara al jurado.</p>
+
+      <div class="row-label">Marca</div>
+      <div class="swatch-row">
+        <div class="swatch"><div class="swatch__chip" style="background:#1E4FD8"></div>Primary</div>
+        <div class="swatch"><div class="swatch__chip" style="background:#163AA6"></div>Primary dark</div>
+        <div class="swatch"><div class="swatch__chip" style="background:#12B3A6"></div>Accent</div>
+      </div>
+
+      <div class="row-label">Neutrales</div>
+      <div class="swatch-row">
+        <div class="swatch"><div class="swatch__chip" style="background:#F4F6FB;border:1px solid #E1E5F0"></div>Bg</div>
+        <div class="swatch"><div class="swatch__chip" style="background:#FFFFFF;border:1px solid #E1E5F0"></div>Surface</div>
+        <div class="swatch"><div class="swatch__chip" style="background:#1A2233"></div>Text</div>
+        <div class="swatch"><div class="swatch__chip" style="background:#6B7387"></div>Muted</div>
+      </div>
+
+      <div class="row-label">Semántico (incidencias)</div>
+      <div class="swatch-row">
+        <div class="swatch"><div class="swatch__chip" style="background:#1C9A6C"></div>Aprobada</div>
+        <div class="swatch"><div class="swatch__chip" style="background:#C98A12"></div>En revisión</div>
+        <div class="swatch"><div class="swatch__chip" style="background:#D8433D"></div>Rechazada</div>
+        <div class="swatch"><div class="swatch__chip" style="background:#6B7387"></div>Cerrada</div>
+      </div>
+
+      <div class="preview-btns">
+        <button class="preview-btn" style="background:#1E4FD8;color:#fff">Botón primario</button>
+        <button class="preview-btn" style="background:#fff;color:#1A2233;border:1px solid #E1E5F0">Botón secundario</button>
+      </div>
+    </div>
+
+    <div class="option">
+      <p class="option__title">B · Industrial Field</p>
+      <p class="option__note">Azul-grafito profundo + acento ámbar. Referencia visual al trabajo de campo (tono "chaleco de seguridad") sin perder seriedad. Más distintiva que A.</p>
+
+      <div class="row-label">Marca</div>
+      <div class="swatch-row">
+        <div class="swatch"><div class="swatch__chip" style="background:#22345E"></div>Primary</div>
+        <div class="swatch"><div class="swatch__chip" style="background:#16223F"></div>Primary dark</div>
+        <div class="swatch"><div class="swatch__chip" style="background:#E8871E"></div>Accent</div>
+      </div>
+
+      <div class="row-label">Neutrales</div>
+      <div class="swatch-row">
+        <div class="swatch"><div class="swatch__chip" style="background:#F5F6F8;border:1px solid #E2E4EA"></div>Bg</div>
+        <div class="swatch"><div class="swatch__chip" style="background:#FFFFFF;border:1px solid #E2E4EA"></div>Surface</div>
+        <div class="swatch"><div class="swatch__chip" style="background:#1B2233"></div>Text</div>
+        <div class="swatch"><div class="swatch__chip" style="background:#6B7280"></div>Muted</div>
+      </div>
+
+      <div class="row-label">Semántico (incidencias)</div>
+      <div class="swatch-row">
+        <div class="swatch"><div class="swatch__chip" style="background:#2E8B57"></div>Aprobada</div>
+        <div class="swatch"><div class="swatch__chip" style="background:#D98C0F"></div>En revisión</div>
+        <div class="swatch"><div class="swatch__chip" style="background:#C0392B"></div>Rechazada</div>
+        <div class="swatch"><div class="swatch__chip" style="background:#6B7280"></div>Cerrada</div>
+      </div>
+
+      <div class="preview-btns">
+        <button class="preview-btn" style="background:#22345E;color:#fff">Botón primario</button>
+        <button class="preview-btn" style="background:#fff;color:#1B2233;border:1px solid #E2E4EA">Botón secundario</button>
+      </div>
+    </div>
+
+    <div class="option">
+      <p class="option__title">C · Neutral Utility</p>
+      <p class="option__note">Grafito + teal-verde. Máximo contraste y sobriedad, pensado para legibilidad al aire libre bajo luz solar. La opción más "accesibilidad-first", menos personalidad de marca.</p>
+
+      <div class="row-label">Marca</div>
+      <div class="swatch-row">
+        <div class="swatch"><div class="swatch__chip" style="background:#2B2F38"></div>Primary</div>
+        <div class="swatch"><div class="swatch__chip" style="background:#1D1F24"></div>Primary dark</div>
+        <div class="swatch"><div class="swatch__chip" style="background:#0F9D8B"></div>Accent</div>
+      </div>
+
+      <div class="row-label">Neutrales</div>
+      <div class="swatch-row">
+        <div class="swatch"><div class="swatch__chip" style="background:#F7F7F8;border:1px solid #E4E5E8"></div>Bg</div>
+        <div class="swatch"><div class="swatch__chip" style="background:#FFFFFF;border:1px solid #E4E5E8"></div>Surface</div>
+        <div class="swatch"><div class="swatch__chip" style="background:#1D1F24"></div>Text</div>
+        <div class="swatch"><div class="swatch__chip" style="background:#6B6F76"></div>Muted</div>
+      </div>
+
+      <div class="row-label">Semántico (incidencias)</div>
+      <div class="swatch-row">
+        <div class="swatch"><div class="swatch__chip" style="background:#1C9A6C"></div>Aprobada</div>
+        <div class="swatch"><div class="swatch__chip" style="background:#B8860B"></div>En revisión</div>
+        <div class="swatch"><div class="swatch__chip" style="background:#C0392B"></div>Rechazada</div>
+        <div class="swatch"><div class="swatch__chip" style="background:#6B6F76"></div>Cerrada</div>
+      </div>
+
+      <div class="preview-btns">
+        <button class="preview-btn" style="background:#2B2F38;color:#fff">Botón primario</button>
+        <button class="preview-btn" style="background:#fff;color:#1D1F24;border:1px solid #E4E5E8">Botón secundario</button>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

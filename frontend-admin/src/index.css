@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Atajo para los inputs/select de los formularios de alta (Usuarios, Sedes, Turnos, Asignaciones). */
+@layer components {
+  .campo {
+    @apply h-11 px-3 rounded-sm border border-borde text-sm text-texto bg-superficie focus:outline-none focus:ring-2 focus:ring-primario/25 focus:border-primario;
+  }
+}
+
+/* Línea de escaneo del panel de huella en el login — ver PaginaInicioSesion. */
+@keyframes escaneo-huella {
+  0%,
+  100% {
+    transform: translateY(-34px);
+    opacity: 0.35;
+  }
+  50% {
+    transform: translateY(34px);
+    opacity: 0.95;
+  }
+}
+
+.animate-escaneo-huella {
+  animation: escaneo-huella 2.6s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}

@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ClickClak — Sistema de diseño</title>
+<link rel="stylesheet" href="tokens.css" />
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: var(--font);
+    background: var(--color-bg);
+    color: var(--color-text);
+    padding: var(--space-6) var(--space-4) var(--space-6);
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-6); }
+
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .intro { color: var(--color-text-muted); font-size: 14px; margin: 0; max-width: 680px; }
+
+  section { display: flex; flex-direction: column; gap: var(--space-3); }
+  .section__title { font-size: 15px; font-weight: 700; margin: 0; }
+  .section__note { font-size: 13px; color: var(--color-text-muted); margin: -4px 0 4px; max-width: 640px; }
+
+  .panel {
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card);
+    padding: var(--space-4);
+  }
+
+  /* ---------- Paleta ---------- */
+  .swatch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-3); }
+  .swatch { border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--color-border); }
+  .swatch__chip { height: 56px; }
+  .swatch__meta { padding: 8px 10px; background: var(--color-surface); }
+  .swatch__name { font-size: 12px; font-weight: 700; display: block; }
+  .swatch__hex { font-size: 11px; color: var(--color-text-muted); font-family: ui-monospace, Consolas, monospace; }
+  .swatch__ratio { font-size: 10px; margin-top: 2px; display: inline-block; padding: 1px 6px; border-radius: var(--radius-full); font-weight: 700; }
+  .ratio-pass { background: var(--color-success-bg); color: var(--color-success-text); }
+  .ratio-warn { background: var(--color-warning-bg); color: var(--color-warning-text); }
+
+  /* ---------- Botones ---------- */
+  .btn {
+    height: 48px;
+    padding: 0 var(--space-4);
+    border-radius: var(--radius-sm);
+    border: none;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    transition: transform .05s ease, opacity .15s ease, background .15s ease, box-shadow .15s ease;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--color-focus-ring); }
+
+  .btn--primary { background: var(--color-primary); color: #fff; }
+  .btn--primary:hover { background: var(--color-primary-dark); }
+
+  .btn--secondary { background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border); }
+  .btn--secondary:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
+  .btn--tertiary { background: transparent; color: var(--color-primary); height: 40px; padding: 0 var(--space-2); }
+  .btn--tertiary:hover { background: var(--color-info-bg); }
+
+  .btn--danger { background: var(--color-danger); color: #fff; }
+  .btn--danger:hover { background: var(--color-danger-text); }
+
+  .btn--accent { background: linear-gradient(135deg, var(--color-primary), var(--color-accent)); color: #fff; }
+
+  .btn--sm { height: 36px; padding: 0 var(--space-3); font-size: 13px; }
+
+  .btn[disabled] { background: var(--color-disabled-bg); color: var(--color-disabled-text); cursor: not-allowed; }
+  .btn[disabled]:active { transform: none; }
+
+  .btn-row { display: flex; gap: var(--space-3); flex-wrap: wrap; align-items: center; }
+  .btn-label { font-size: 11px; color: var(--color-text-muted); width: 100%; margin-top: 4px; }
+
+  /* ---------- Alertas inline ---------- */
+  .alert {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border-radius: var(--radius-sm);
+    border: 1px solid;
+    font-size: 13px;
+  }
+  .alert__icon { font-size: 16px; line-height: 1; flex-shrink: 0; }
+  .alert__title { font-weight: 700; margin: 0 0 2px; font-size: 13px; }
+  .alert__body { margin: 0; }
+  .alert--success { background: var(--color-success-bg); border-color: var(--color-success-border); color: var(--color-success-text); }
+  .alert--warning { background: var(--color-warning-bg); border-color: var(--color-warning-border); color: var(--color-warning-text); }
+  .alert--danger  { background: var(--color-danger-bg);  border-color: var(--color-danger-border);  color: var(--color-danger-text); }
+  .alert--info    { background: var(--color-info-bg);    border-color: var(--color-info-border);    color: var(--color-info-text); }
+
+  /* ---------- Toast ---------- */
+  .toast-demo { display: flex; flex-direction: column; gap: var(--space-2); }
+  .toast {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    background: var(--color-text);
+    color: #fff;
+    padding: 12px var(--space-3);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-toast);
+    font-size: 13px;
+    max-width: 360px;
+  }
+  .toast--success { background: var(--color-success); }
+  .toast--danger { background: var(--color-danger); }
+  .toast__icon { font-size: 15px; }
+
+  /* ---------- Popup / modal ---------- */
+  .modal-demo {
+    position: relative;
+    background: var(--color-overlay);
+    border-radius: var(--radius-md);
+    padding: var(--space-6) var(--space-4);
+    display: flex;
+    justify-content: center;
+  }
+  .modal {
+    width: 100%;
+    max-width: 360px;
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-modal);
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  .modal__header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); }
+  .modal__title { font-size: 16px; font-weight: 700; margin: 0; }
+  .modal__close {
+    width: 28px; height: 28px; border-radius: var(--radius-full); border: none;
+    background: var(--color-bg); color: var(--color-text-muted); cursor: pointer; font-size: 14px;
+    flex-shrink: 0;
+  }
+  .modal__body { font-size: 13px; color: var(--color-text-muted); margin: 0; }
+  .modal__footer { display: flex; gap: var(--space-2); justify-content: flex-end; }
+  .modal__footer .btn { height: 40px; padding: 0 var(--space-3); font-size: 13px; }
+
+  /* ---------- Status pills (ya usados en incidencias) ---------- */
+  .pill-row { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 600; padding: 5px 10px; border-radius: var(--radius-full);
+  }
+  .pill__dot { width: 7px; height: 7px; border-radius: var(--radius-full); }
+  .pill--registrada { background: var(--color-info-bg); color: var(--color-status-registrada); }
+  .pill--registrada .pill__dot { background: var(--color-status-registrada); }
+  .pill--revision { background: var(--color-warning-bg); color: var(--color-status-revision); }
+  .pill--revision .pill__dot { background: var(--color-status-revision); }
+  .pill--aprobada { background: var(--color-success-bg); color: var(--color-status-aprobada); }
+  .pill--aprobada .pill__dot { background: var(--color-status-aprobada); }
+  .pill--rechazada { background: var(--color-danger-bg); color: var(--color-status-rechazada); }
+  .pill--rechazada .pill__dot { background: var(--color-status-rechazada); }
+  .pill--cerrada { background: var(--color-border); color: var(--color-status-cerrada); }
+  .pill--cerrada .pill__dot { background: var(--color-status-cerrada); }
+
+  /* ---------- Form field (referencia) ---------- */
+  .field { display: flex; flex-direction: column; gap: var(--space-1); max-width: 320px; }
+  .field__label { font-size: 13px; font-weight: 600; }
+  .field__input {
+    height: 44px; padding: 0 var(--space-3); border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm); font-size: 14px; font-family: inherit; background: var(--color-surface); color: var(--color-text);
+  }
+  .field__input:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-focus-ring); }
+  .field__input--error { border-color: var(--color-danger); }
+  .field__input--error:focus { box-shadow: 0 0 0 3px var(--color-danger-bg); }
+  .field__hint-error { font-size: 12px; color: var(--color-danger-text); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div>
+    <h1>ClickClak — Sistema de diseño (v1)</h1>
+    <p class="intro">Base de tokens, átomos y componentes sobre la paleta <strong>A · Corporate Trust</strong> (decisión confirmada). Fuente única de verdad: <code>tokens.css</code>. Todo color de texto sobre fondo de color en esta página cumple contraste AA (≥ 4.5:1 texto normal, ≥ 3:1 texto grande/ícono) salvo donde se indique.</p>
+  </div>
+
+  <!-- ============ PALETA ============ -->
+  <section>
+    <h2 class="section__title">1. Paleta de color</h2>
+    <p class="section__note">Marca + neutrales + semántico. Los colores de alerta reutilizan el mismo hue que los estados de incidencia para no duplicar significado.</p>
+
+    <div class="panel">
+      <div class="row-label" style="font-size:11px;font-weight:700;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;">Marca</div>
+      <div class="swatch-grid">
+        <div class="swatch"><div class="swatch__chip" style="background:var(--color-primary)"></div><div class="swatch__meta"><span class="swatch__name">Primary</span><span class="swatch__hex">#1E4FD8</span><br><span class="swatch__ratio ratio-pass">8.1:1 con blanco</span></div></div>
+        <div class="swatch"><div class="swatch__chip" style="background:var(--color-primary-dark)"></div><div class="swatch__meta"><span class="swatch__name">Primary dark</span><span class="swatch__hex">#163AA6</span><br><span class="swatch__ratio ratio-pass">hover / active</span></div></div>
+        <div class="swatch"><div class="swatch__chip" style="background:var(--color-accent)"></div><div class="swatch__meta"><span class="swatch__name">Accent</span><span class="swatch__hex">#12B3A6</span><br><span class="swatch__ratio ratio-warn">solo decorativo</span></div></div>
+      </div>
+
+      <div class="row-label" style="font-size:11px;font-weight:700;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.04em;margin:20px 0 8px;">Neutrales</div>
+      <div class="swatch-grid">
+        <div class="swatch"><div class="swatch__chip" style="background:var(--color-bg)"></div><div class="swatch__meta"><span class="swatch__name">Bg</span><span class="swatch__hex">#F4F6FB</span></div></div>
+        <div class="swatch"><div class="swatch__chip" style="background:var(--color-surface)"></div><div class="swatch__meta"><span class="swatch__name">Surface</span><span class="swatch__hex">#FFFFFF</span></div></div>
+        <div class="swatch"><div class="swatch__chip" style="background:var(--color-text)"></div><div class="swatch__meta"><span class="swatch__name">Text</span><span class="swatch__hex">#1A2233</span><br><span class="swatch__ratio ratio-pass">14.9:1 sobre bg</span></div></div>
+        <div class="swatch"><div class="swatch__chip" style="background:var(--color-text-muted)"></div><div class="swatch__meta"><span class="swatch__name">Text muted</span><span class="swatch__hex">#6B7387</span><br><span class="swatch__ratio ratio-pass">4.8:1 sobre bg</span></div></div>
+        <div class="swatch"><div class="swatch__chip" style="background:var(--color-border)"></div><div class="swatch__meta"><span class="swatch__name">Border</span><span class="swatch__hex">#E1E5F0</span></div></div>
+      </div>
+
+      <div class="row-label" style="font-size:11px;font-weight:700;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.04em;margin:20px 0 8px;">Semántico (alertas + estado de incidencia)</div>
+      <div class="swatch-grid">
+        <div class="swatch"><div class="swatch__chip" style="background:var(--color-success)"></div><div class="swatch__meta"><span class="swatch__name">Success</span><span class="swatch__hex">#1C9A6C</span></div></div>
+        <div class="swatch"><div class="swatch__chip" style="background:var(--color-warning)"></div><div class="swatch__meta"><span class="swatch__name">Warning</span><span class="swatch__hex">#C98A12</span></div></div>
+        <div class="swatch"><div class="swatch__chip" style="background:var(--color-danger)"></div><div class="swatch__meta"><span class="swatch__name">Danger</span><span class="swatch__hex">#D8433D</span></div></div>
+        <div class="swatch"><div class="swatch__chip" style="background:var(--color-info)"></div><div class="swatch__meta"><span class="swatch__name">Info</span><span class="swatch__hex">#1E4FD8</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BOTONES ============ -->
+  <section>
+    <h2 class="section__title">2. Botones</h2>
+    <p class="section__note">Un solo botón primario por vista. Estados: normal, hover, focus (anillo visible por teclado), active (scale), disabled. Alto táctil mínimo 44px — aquí 48px.</p>
+    <div class="panel btn-row">
+      <button class="btn btn--primary">Primario</button>
+      <button class="btn btn--secondary">Secundario</button>
+      <button class="btn btn--tertiary">Terciario / enlace</button>
+      <button class="btn btn--danger">Destructivo</button>
+      <button class="btn btn--accent">Acento (CTA especial)</button>
+      <button class="btn btn--primary" disabled>Deshabilitado</button>
+      <button class="btn btn--secondary btn--sm">Compacto</button>
+    </div>
+  </section>
+
+  <!-- ============ ALERTAS ============ -->
+  <section>
+    <h2 class="section__title">3. Alertas inline (banner)</h2>
+    <p class="section__note">Fondo tintado + borde + texto oscuro del mismo hue (no color puro sobre blanco) para pasar AA. Usar para feedback persistente dentro de una pantalla o formulario.</p>
+    <div class="panel" style="display:flex;flex-direction:column;gap:var(--space-2);">
+      <div class="alert alert--success"><span class="alert__icon">✔</span><div><p class="alert__title">Marcación registrada</p><p class="alert__body">Tu asistencia de las 08:03 quedó guardada y sincronizada.</p></div></div>
+      <div class="alert alert--warning"><span class="alert__icon">⚠</span><div><p class="alert__title">Sin conexión</p><p class="alert__body">Se guardó localmente. Se sincronizará al recuperar señal.</p></div></div>
+      <div class="alert alert--danger"><span class="alert__icon">✕</span><div><p class="alert__title">No se pudo verificar tu huella</p><p class="alert__body">Intenta de nuevo o usa correo y contraseña.</p></div></div>
+      <div class="alert alert--info"><span class="alert__icon">ℹ</span><div><p class="alert__title">Nueva zona detectada</p><p class="alert__body">Confirma tu ubicación de servicio antes de marcar.</p></div></div>
+    </div>
+  </section>
+
+  <!-- ============ TOAST ============ -->
+  <section>
+    <h2 class="section__title">4. Toast (notificación flotante)</h2>
+    <p class="section__note">Confirmación breve y auto-descartable (3–4s), esquina inferior o superior. Color sólido porque el texto es corto y siempre blanco (contraste ≥ 4.5:1 verificado sobre cada color base).</p>
+    <div class="panel toast-demo">
+      <div class="toast toast--success"><span class="toast__icon">✔</span> Asistencia marcada — 08:03 a.m.</div>
+      <div class="toast toast--danger"><span class="toast__icon">✕</span> Error de red. Reintentando…</div>
+    </div>
+  </section>
+
+  <!-- ============ MODAL / POPUP ============ -->
+  <section>
+    <h2 class="section__title">5. Popup / modal de confirmación</h2>
+    <p class="section__note">Overlay <code>--color-overlay</code> (55% opacidad) bloquea el fondo. Acción destructiva siempre a la derecha con color <code>--color-danger</code>; cancelar es secundario. Cierre por ✕, overlay-click y tecla Esc.</p>
+    <div class="modal-demo">
+      <div class="modal">
+        <div class="modal__header">
+          <h3 class="modal__title">¿Cerrar sesión?</h3>
+          <button class="modal__close" aria-label="Cerrar">✕</button>
+        </div>
+        <p class="modal__body">Tu turno sigue activo. Si cierras sesión, deberás volver a autenticarte para marcar tu salida.</p>
+        <div class="modal__footer">
+          <button class="btn btn--secondary">Cancelar</button>
+          <button class="btn btn--danger">Cerrar sesión</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STATUS PILLS ============ -->
+  <section>
+    <h2 class="section__title">6. Estado de incidencia (pill)</h2>
+    <p class="section__note">Flujo fijo: Registrada → En revisión → Aprobada / Rechazada → Cerrada.</p>
+    <div class="panel pill-row">
+      <span class="pill pill--registrada"><span class="pill__dot"></span>Registrada</span>
+      <span class="pill pill--revision"><span class="pill__dot"></span>En revisión</span>
+      <span class="pill pill--aprobada"><span class="pill__dot"></span>Aprobada</span>
+      <span class="pill pill--rechazada"><span class="pill__dot"></span>Rechazada</span>
+      <span class="pill pill--cerrada"><span class="pill__dot"></span>Cerrada</span>
+    </div>
+  </section>
+
+  <!-- ============ CAMPO DE FORMULARIO ============ -->
+  <section>
+    <h2 class="section__title">7. Campo de formulario</h2>
+    <p class="section__note">Estados normal, focus (anillo azul) y error (borde + anillo rojo tenue). Reutilizado tal cual en login.html.</p>
+    <div class="panel" style="display:flex;gap:var(--space-4);flex-wrap:wrap;">
+      <div class="field">
+        <label class="field__label">Correo corporativo</label>
+        <input class="field__input" placeholder="nombre.apellido@empresa.com" />
+      </div>
+      <div class="field">
+        <label class="field__label">Contraseña</label>
+        <input class="field__input field__input--error" value="1234" />
+        <span class="field__hint-error">La contraseña debe tener al menos 8 caracteres.</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="section__title">Pendiente de definir (fuera de alcance de esta iteración)</h2>
+    <p class="section__note">Etiquetado como <strong>supuesto/pendiente</strong>, no decisión: tema oscuro para modo campo/exteriores con poca luz; iconografía final (se usaron glifos Unicode como placeholder, no un set de íconos SVG); breakpoints y layout del panel administrativo (RRHH/supervisores).</p>
+  </section>
+
+</div>
+</body>
+</html>

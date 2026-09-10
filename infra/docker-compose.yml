@@ -1,0 +1,27 @@
+# Compose de desarrollo local — por ahora solo la base de datos.
+# El backend se agrega aquí cuando tenga un Dockerfile (pendiente); mientras tanto
+# se corre con `mvn spring-boot:run` apuntando a este Postgres.
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: clickclak-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: clickclak
+      POSTGRES_USER: clickclak
+      POSTGRES_PASSWORD: clickclak
+    ports:
+      # 5434 en el host: esta máquina tiene DOS instancias nativas de Postgres corriendo
+      # como servicios de Windows, ocupando 5432 y 5433. El contenedor sigue escuchando
+      # 5432 puertas adentro; solo cambia el puerto publicado en el host.
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clickclak -d clickclak"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

@@ -1,0 +1,24 @@
+package com.clickclak.backend.dto;
+
+import java.time.Instant;
+
+import com.clickclak.backend.model.Usuario;
+
+public record UsuarioResponse(
+    Long id,
+    String nombres,
+    String apellidos,
+    String tipoDocumento,
+    String numeroDocumento,
+    String correo,
+    String rol,
+    boolean activo,
+    Instant creadoEn
+) {
+    public static UsuarioResponse desde(Usuario usuario) {
+        return new UsuarioResponse(
+            usuario.getId(), usuario.getNombres(), usuario.getApellidos(),
+            usuario.getTipoDocumento(), usuario.getNumeroDocumento(), usuario.getCorreo(),
+            usuario.getRol().getNombre(), usuario.isActivo(), usuario.getCreadoEn());
+    }
+}

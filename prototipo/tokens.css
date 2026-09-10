@@ -1,0 +1,70 @@
+/* ClickClak — Paleta oficial: A · Corporate Trust */
+:root {
+  --color-primary: #1E4FD8;
+  --color-primary-dark: #163AA6;
+  --color-accent: #12B3A6;
+
+  --color-bg: #F4F6FB;
+  --color-surface: #FFFFFF;
+  --color-text: #1A2233;
+  --color-text-muted: #6B7387;
+  --color-border: #E1E5F0;
+
+  /* Estados de incidencia (Registrada / En revisión / Aprobada / Rechazada / Cerrada) */
+  --color-status-registrada: #1E4FD8;
+  --color-status-revision: #C98A12;
+  --color-status-aprobada: #1C9A6C;
+  --color-status-rechazada: #D8433D;
+  --color-status-cerrada: #6B7387;
+
+  --color-danger: #D8433D;
+
+  /* Alertas / feedback (banner inline, toast, estado de campo) — reutilizan los mismos
+     hues que los estados de incidencia para no introducir una paleta paralela */
+  --color-success: #1C9A6C;
+  --color-success-bg: #E8F7F1;
+  --color-success-border: #BEE8D6;
+  --color-success-text: #146B4D;
+
+  --color-warning: #C98A12;
+  --color-warning-bg: #FDF3E0;
+  --color-warning-border: #F3DBA6;
+  --color-warning-text: #8A5F0C;
+
+  --color-danger-bg: #FBEAE9;
+  --color-danger-border: #F1C6C3;
+  --color-danger-text: #A02E29;
+
+  --color-info: #1E4FD8;
+  --color-info-bg: #E9EFFC;
+  --color-info-border: #C4D3F7;
+  --color-info-text: #163AA6;
+
+  /* Estado de interacción */
+  --color-focus-ring: rgba(30, 79, 216, 0.25);
+  --color-disabled-bg: #EDEFF5;
+  --color-disabled-text: #A4AABB;
+  --color-overlay: rgba(15, 22, 45, 0.55);
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-full: 999px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 32px;
+  --space-6: 48px;
+
+  --shadow-card: 0 8px 24px rgba(20, 30, 70, 0.08);
+  --shadow-modal: 0 24px 48px rgba(15, 22, 45, 0.28);
+  --shadow-toast: 0 12px 28px rgba(20, 30, 70, 0.18);
+
+  --z-overlay: 100;
+  --z-modal: 110;
+  --z-toast: 120;
+
+  --font: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}

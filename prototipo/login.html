@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ClickClak — Iniciar sesión</title>
+<link rel="stylesheet" href="tokens.css" />
+<style>
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    height: 100%;
+    font-family: var(--font);
+    color: var(--color-text);
+  }
+
+  /* ---------- Layout de pantalla: panel dividido ---------- */
+  .login-layout {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  .login-panel--form {
+    flex: 1 1 55%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg);
+    padding: var(--space-6) var(--space-4);
+    overflow-y: auto;
+  }
+
+  .login-screen {
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-5);
+  }
+
+  /* Panel de marca / biometría: solo decorativo, referencia visual de la
+     captura original (split-screen + huella). Usa el gradiente de marca —
+     no lleva texto crítico, así que el bajo contraste bajo luz solar no aplica. */
+  .login-panel--brand {
+    flex: 1 1 45%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-4);
+    padding: var(--space-6);
+    text-align: center;
+    color: #fff;
+    background: linear-gradient(160deg, var(--color-primary-dark), var(--color-primary) 55%, var(--color-accent));
+  }
+
+  .brand-art {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .brand-art::before {
+    content: "";
+    position: absolute;
+    inset: -16px;
+    border-radius: var(--radius-full);
+    background: radial-gradient(circle, rgba(255,255,255,.28), transparent 70%);
+    filter: blur(6px);
+  }
+  .brand-art__print { position: relative; }
+  .brand-art__scan {
+    animation: brand-art-scan 2.6s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  @keyframes brand-art-scan {
+    0%, 100% { transform: translateY(-34px); opacity: .35; }
+    50% { transform: translateY(34px); opacity: .95; }
+  }
+
+  .login-panel--brand__title {
+    font-size: 17px;
+    font-weight: 700;
+    margin: 0;
+  }
+  .login-panel--brand__note {
+    font-size: 13px;
+    color: rgba(255,255,255,.85);
+    margin: 0;
+    max-width: 260px;
+  }
+
+  /* ---------- Componente: marca ---------- */
+  .brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    text-align: center;
+  }
+
+  .brand__logo {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 22px;
+  }
+
+  .brand__title {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .brand__subtitle {
+    font-size: 14px;
+    color: var(--color-text-muted);
+    margin: 0;
+  }
+
+  /* ---------- Componente: tarjeta ---------- */
+  .card {
+    width: 100%;
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card);
+    padding: var(--space-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  /* ---------- Componente: campo de formulario ---------- */
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .field__label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .field__input {
+    height: 48px;
+    padding: 0 var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    font-family: inherit;
+    color: var(--color-text);
+    background: var(--color-surface);
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+
+  .field__input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-focus-ring);
+  }
+
+  .field__error {
+    font-size: 12px;
+    color: var(--color-danger);
+    min-height: 16px;
+  }
+
+  .field-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+  }
+
+  .checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--color-text-muted);
+  }
+
+  .link {
+    color: var(--color-primary);
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .link:hover { text-decoration: underline; }
+
+  /* ---------- Componente: botón (reutilizable, variantes) ---------- */
+  .btn {
+    height: 48px;
+    border-radius: var(--radius-sm);
+    border: none;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    transition: transform .05s ease, opacity .15s ease, background .15s ease;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--color-focus-ring); }
+
+  .btn--primary {
+    background: var(--color-primary);
+    color: #fff;
+  }
+  .btn--primary:hover { background: var(--color-primary-dark); }
+
+  .btn--secondary {
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+  }
+  .btn--secondary:hover { border-color: var(--color-primary); }
+
+  .btn--full { width: 100%; }
+
+  .btn--accent {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+    color: #fff;
+    height: 56px;
+    font-size: 16px;
+    box-shadow: var(--shadow-toast);
+  }
+  .btn--accent:hover { filter: brightness(1.05); }
+
+  /* ---------- Componente: acceso rápido de marcación ---------- */
+  .quick-mark {
+    width: 100%;
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card);
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    text-align: center;
+  }
+  .quick-mark__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-full);
+    background: var(--color-info-bg);
+    color: var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+  .quick-mark__title { font-size: 15px; font-weight: 700; margin: 0; }
+  .quick-mark__note { font-size: 12px; color: var(--color-text-muted); margin: 0 0 var(--space-2); }
+
+  /* ---------- Componente: separador ---------- */
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    color: var(--color-text-muted);
+    font-size: 12px;
+    width: 100%;
+  }
+  .divider::before, .divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--color-border);
+  }
+
+  /* ---------- Pie de pantalla ---------- */
+  .footnote {
+    font-size: 13px;
+    color: var(--color-text-muted);
+    text-align: center;
+  }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--color-text-muted);
+  }
+  .status-pill__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-full);
+    background: var(--color-accent);
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 900px) {
+    .login-panel--brand { display: none; }
+    .login-panel--form { flex: 1 1 100%; }
+  }
+
+  @media (max-width: 420px) {
+    .login-panel--form { padding: var(--space-6) var(--space-3) var(--space-3); align-items: flex-start; }
+    .card { padding: var(--space-4); border-radius: var(--radius-sm); box-shadow: none; border: 1px solid var(--color-border); }
+  }
+</style>
+</head>
+<body>
+
+  <div class="login-layout">
+
+    <main class="login-panel--form">
+      <div class="login-screen">
+
+        <div class="brand">
+          <div class="brand__logo" aria-hidden="true">CC</div>
+          <h1 class="brand__title">ClickClak</h1>
+          <p class="brand__subtitle">Control de asistencia para personal de campo</p>
+        </div>
+
+        <!-- Acceso rápido: marcar asistencia con biometría, SIN iniciar sesión.
+             La huella/rostro (WebAuthn, delegado al SO) es la propia autenticación;
+             no se pide correo/contraseña para este flujo. -->
+        <section class="quick-mark" aria-labelledby="quick-mark-title">
+          <span class="quick-mark__icon" aria-hidden="true">🖐</span>
+          <h2 class="quick-mark__title" id="quick-mark-title">Marcar asistencia</h2>
+          <p class="quick-mark__note">Usa tu huella o rostro. No necesitas iniciar sesión.</p>
+          <button type="button" class="btn btn--accent btn--full" id="quick-mark-btn">
+            <span aria-hidden="true">🖐</span> Marcar con biometría
+          </button>
+        </section>
+
+        <div class="divider">o inicia sesión con tu cuenta</div>
+
+        <form class="card" novalidate>
+
+          <div class="field">
+            <label class="field__label" for="email">Correo corporativo</label>
+            <input class="field__input" type="email" id="email" name="email"
+                   placeholder="nombre.apellido@empresa.com" autocomplete="username" required />
+            <span class="field__error" id="email-error"></span>
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="password">Contraseña</label>
+            <input class="field__input" type="password" id="password" name="password"
+                   placeholder="••••••••" autocomplete="current-password" required />
+            <span class="field__error" id="password-error"></span>
+          </div>
+
+          <div class="field-row">
+            <label class="checkbox">
+              <input type="checkbox" id="remember" name="remember" />
+              Recordarme
+            </label>
+            <a class="link" href="#recuperar">¿Olvidaste tu contraseña?</a>
+          </div>
+
+          <button type="submit" class="btn btn--primary btn--full">Iniciar sesión</button>
+
+          <div class="divider">o</div>
+
+          <button type="button" class="btn btn--secondary btn--full" id="biometric-btn">
+            <span aria-hidden="true">🔒</span> Ingresar con biometría
+          </button>
+
+        </form>
+
+        <div class="footnote">
+          <span class="status-pill">
+            <span class="status-pill__dot" aria-hidden="true"></span>
+            Modo offline disponible — tus marcaciones se sincronizan al reconectar
+          </span>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- Panel de marca: referencia directa al layout split-screen + huella
+         de la captura original, sobre el gradiente primary → accent ya definido. -->
+    <aside class="login-panel--brand" aria-hidden="true">
+      <div class="brand-art">
+        <svg class="brand-art__print" width="200" height="200" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="120" cy="130" r="112" stroke="rgba(255,255,255,.15)" stroke-width="1" fill="none"/>
+          <circle cx="120" cy="130" r="84" stroke="rgba(255,255,255,.12)" stroke-width="1" fill="none"/>
+          <g stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none">
+            <path d="M30 130 A90 90 0 0 1 210 130" opacity=".3"/>
+            <path d="M42 130 A78 78 0 0 1 198 130" opacity=".45"/>
+            <path d="M54 130 A66 66 0 0 1 186 130" opacity=".6"/>
+            <path d="M66 130 A54 54 0 0 1 174 130" opacity=".75"/>
+            <path d="M78 130 A42 42 0 0 1 162 130" opacity=".9"/>
+            <path d="M90 130 A30 30 0 0 1 150 130" opacity="1"/>
+          </g>
+          <clipPath id="fingerprint-clip"><circle cx="120" cy="130" r="112"/></clipPath>
+          <line class="brand-art__scan" x1="14" y1="130" x2="226" y2="130" stroke="#fff" stroke-width="2"
+                clip-path="url(#fingerprint-clip)"/>
+        </svg>
+      </div>
+      <p class="login-panel--brand__title">Autenticación biométrica</p>
+      <p class="login-panel--brand__note">Tu huella o rostro, verificados por tu propio dispositivo. Sin contraseñas que recordar en campo.</p>
+    </aside>
+
+  </div>
+
+</body>
+</html>
