@@ -1,0 +1,35 @@
+Pruebas automatizadas del backend · simulacro local de la fusión de los 13 PR (commit 6a1fb44, no subido) · 3-oct-2026
+Comando: ./mvnw -B test  (backend/, perfil dev, Postgres 16.4 + PostGIS 3.4 en Docker, puerto 5434, JDK 23.0.1)
+Fuente: target/surefire-reports/TEST-*.xml (una línea por clase)
+
+Clase                                            Pruebas  Fallos Errores  Omitidas
+ClickClakBackendApplicationTests                       1       0       0         0
+AutenticacionControllerTest                            4       0       0         0
+AutenticacionFlujoRealTest                             1       0       0         0
+AutenticacionSesionControllerTest                      6       0       0         0
+ConfiguracionOperativaControllerTest                   3       0       0         0
+DispositivoControllerTest                              2       0       0         0
+IncidenciaControllerTest                              14       0       0         0
+MarcacionControllerTest                                2       0       0         0
+SeguridadWebTest                                      16       0       0         0
+UsuarioControllerTest                                  6       0       0         0
+WebAuthnControllerTest                                 7       0       0         0
+RestriccionesBaseDatosTest                             8       0       0         0
+UbicacionRepositoryTest                                1       0       0         0
+AlmacenDesafiosWebAuthnTest                            5       0       0         0
+AlmacenIntentosFallidosTest                            9       0       0         0
+AlmacenTokensRecuperacionTest                          3       0       0         0
+AlmacenTokensRevocadosTest                             2       0       0         0
+JwtServiceTest                                         3       0       0         0
+PoliticaContrasenasTest                                5       0       0         0
+RepositorioCredencialesWebAuthnTest                    9       0       0         0
+AsignacionServiceTest                                  5       0       0         0
+AutenticacionServiceTest                              11       0       0         0
+HorarioServiceTest                                     3       0       0         0
+IncidenciaServiceTest                                 20       0       0         0
+MarcacionServiceTest                                   7       0       0         0
+MotorValidacionContextualServiceTest                   8       0       0         0
+RecuperacionClaveServiceTest                           7       0       0         0
+UsuarioServiceTest                                    10       0       0         0
+
+TOTAL (28 clases)                                    178       0       0         0
