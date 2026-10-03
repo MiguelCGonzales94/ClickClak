@@ -43,4 +43,8 @@ done
 # 4. Arranque. El proxy ignora el selector de certificado si no es ejecutable (ver el propio archivo).
 chmod +x nginx/10-seleccionar-certificado.envsh
 $COMPOSE up -d
+# El proxy lee su configuración de archivos montados: Compose no ve que cambiaron, así que no
+# recrea el contenedor, y Nginx solo procesa las plantillas al arrancar. Sin esta línea, un
+# despliegue que cambie la configuración dejaría corriendo el proxy anterior. Tarda un segundo.
+$COMPOSE up -d --force-recreate --no-deps proxy
 $COMPOSE ps
