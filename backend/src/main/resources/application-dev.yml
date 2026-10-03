@@ -15,3 +15,6 @@ clickclak:
     jwt:
       # Secreto de DESARROLLO únicamente — nunca usar este valor fuera de esta máquina.
       secret: "clickclak-desarrollo-clave-hmac-no-usar-en-produccion-cambiar-siempre"
+    cors:
+      # Servidores de Vite del panel (5173) y de la PWA de campo (5174) en desarrollo.
+      origenes: http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174
