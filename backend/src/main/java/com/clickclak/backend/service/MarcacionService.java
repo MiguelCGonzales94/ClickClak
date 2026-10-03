@@ -17,16 +17,13 @@ import com.clickclak.backend.exception.DispositivoNoAutorizadoException;
 import com.clickclak.backend.exception.RecursoNoEncontradoException;
 import com.clickclak.backend.model.Asignacion;
 import com.clickclak.backend.model.Dispositivo;
-import com.clickclak.backend.model.EstadoIncidencia;
 import com.clickclak.backend.model.EstadoValidacion;
-import com.clickclak.backend.model.Incidencia;
 import com.clickclak.backend.model.Marcacion;
 import com.clickclak.backend.model.TipoEvento;
 import com.clickclak.backend.model.TipoIncidencia;
 import com.clickclak.backend.model.Usuario;
 import com.clickclak.backend.repository.AsignacionRepository;
 import com.clickclak.backend.repository.DispositivoRepository;
-import com.clickclak.backend.repository.IncidenciaRepository;
 import com.clickclak.backend.repository.MarcacionRepository;
 import com.clickclak.backend.repository.UbicacionRepository;
 import com.clickclak.backend.repository.UsuarioRepository;
@@ -50,7 +47,7 @@ public class MarcacionService {
     private final DispositivoRepository dispositivoRepository;
     private final AsignacionRepository asignacionRepository;
     private final UbicacionRepository ubicacionRepository;
-    private final IncidenciaRepository incidenciaRepository;
+    private final IncidenciaService incidenciaService;
     private final MotorValidacionContextualService motorValidacionContextual;
 
     public MarcacionService(
@@ -59,14 +56,14 @@ public class MarcacionService {
             DispositivoRepository dispositivoRepository,
             AsignacionRepository asignacionRepository,
             UbicacionRepository ubicacionRepository,
-            IncidenciaRepository incidenciaRepository,
+            IncidenciaService incidenciaService,
             MotorValidacionContextualService motorValidacionContextual) {
         this.marcacionRepository = marcacionRepository;
         this.usuarioRepository = usuarioRepository;
         this.dispositivoRepository = dispositivoRepository;
         this.asignacionRepository = asignacionRepository;
         this.ubicacionRepository = ubicacionRepository;
-        this.incidenciaRepository = incidenciaRepository;
+        this.incidenciaService = incidenciaService;
         this.motorValidacionContextual = motorValidacionContextual;
     }
 
@@ -137,15 +134,10 @@ public class MarcacionService {
     }
 
     private void generarIncidenciaTardanza(Usuario usuario, Marcacion marcacion, long minutosTarde, LocalDate fechaEvento) {
-        incidenciaRepository.save(Incidencia.builder()
-                .usuario(usuario)
-                .marcacion(marcacion)
-                .tipo(TipoIncidencia.TARDANZA)
-                .estado(EstadoIncidencia.REGISTRADA)
-                .fechaEvento(fechaEvento)
-                .descripcion("Generada automáticamente por el motor de validación contextual: ingreso con "
-                        + minutosTarde + " minuto(s) de tardanza respecto del horario asignado.")
-                .creadoPor(usuario)
-                .build());
+        // Por IncidenciaService y no directo al repositorio: así la incidencia automática nace con
+        // su historial y su auditoría igual que una registrada a mano.
+        incidenciaService.registrarAutomatica(usuario, marcacion, TipoIncidencia.TARDANZA, fechaEvento,
+                "Generada automáticamente por el motor de validación contextual: ingreso con "
+                        + minutosTarde + " minuto(s) de tardanza respecto del horario asignado.");
     }
 }
