@@ -93,6 +93,8 @@ services:
       - "8443:8443"
     volumes:
       - ./nginx/plantillas:/etc/nginx/templates:ro
+      # Sin esto la imagen deja activa su página de bienvenida para cualquier Host "localhost".
+      - ./nginx/vacio.conf:/etc/nginx/conf.d/default.conf:ro
       - ./nginx/10-seleccionar-certificado.envsh:/docker-entrypoint.d/10-seleccionar-certificado.envsh:ro
       # Certificado real de Let's Encrypt (lo gestiona certbot en el host) y, mientras no exista,
       # uno autofirmado temporal para que el stack funcione desde el primer despliegue.
