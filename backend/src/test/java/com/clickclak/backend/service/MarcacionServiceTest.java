@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -35,11 +36,11 @@ import com.clickclak.backend.model.Marcacion;
 import com.clickclak.backend.model.Proyecto;
 import com.clickclak.backend.model.Rol;
 import com.clickclak.backend.model.TipoEvento;
+import com.clickclak.backend.model.TipoIncidencia;
 import com.clickclak.backend.model.Ubicacion;
 import com.clickclak.backend.model.Usuario;
 import com.clickclak.backend.repository.AsignacionRepository;
 import com.clickclak.backend.repository.DispositivoRepository;
-import com.clickclak.backend.repository.IncidenciaRepository;
 import com.clickclak.backend.repository.MarcacionRepository;
 import com.clickclak.backend.repository.UbicacionRepository;
 import com.clickclak.backend.repository.UsuarioRepository;
@@ -52,7 +53,7 @@ class MarcacionServiceTest {
     @Mock private DispositivoRepository dispositivoRepository;
     @Mock private AsignacionRepository asignacionRepository;
     @Mock private UbicacionRepository ubicacionRepository;
-    @Mock private IncidenciaRepository incidenciaRepository;
+    @Mock private IncidenciaService incidenciaService;
 
     private MarcacionService marcacionService;
 
@@ -63,7 +64,7 @@ class MarcacionServiceTest {
     void configurar() {
         marcacionService = new MarcacionService(
                 marcacionRepository, usuarioRepository, dispositivoRepository,
-                asignacionRepository, ubicacionRepository, incidenciaRepository,
+                asignacionRepository, ubicacionRepository, incidenciaService,
                 new MotorValidacionContextualService());
 
         usuario = Usuario.builder().id(1L).nombres("Ana").apellidos("Pérez")
@@ -130,7 +131,7 @@ class MarcacionServiceTest {
         Marcacion resultado = marcacionService.registrarMarcacion(solicitud(UUID.randomUUID()));
 
         assertThat(resultado.getEstadoValidacion()).isEqualTo(EstadoValidacion.SIN_ASIGNACION);
-        verify(incidenciaRepository, never()).save(any());
+        verify(incidenciaService, never()).registrarAutomatica(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -150,7 +151,7 @@ class MarcacionServiceTest {
         Marcacion resultado = marcacionService.registrarMarcacion(solicitud);
 
         assertThat(resultado.getEstadoValidacion()).isEqualTo(EstadoValidacion.VALIDO);
-        verify(incidenciaRepository, never()).save(any());
+        verify(incidenciaService, never()).registrarAutomatica(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -169,7 +170,7 @@ class MarcacionServiceTest {
 
         marcacionService.registrarMarcacion(solicitud);
 
-        verify(incidenciaRepository).save(any());
+        verify(incidenciaService).registrarAutomatica(any(), any(), eq(TipoIncidencia.TARDANZA), any(), any());
     }
 
     private RegistrarMarcacionRequest solicitud(UUID uuidCliente) {

@@ -38,6 +38,11 @@ public class ManejadorGlobalExcepciones {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
     }
 
+    @ExceptionHandler(TransicionIncidenciaInvalidaException.class)
+    public ResponseEntity<Map<String, String>> transicionIncidenciaInvalida(TransicionIncidenciaInvalidaException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler(RecursoDuplicadoException.class)
     public ResponseEntity<Map<String, String>> recursoDuplicado(RecursoDuplicadoException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
