@@ -1,0 +1,39 @@
+Evidencia de Let's Encrypt, HSTS y renovación automática
+Fecha: 3-oct-2026
+VM: vm-clickclak (Azure, Chile Central)
+Dominio: clickclak-utp.chilecentral.cloudapp.azure.com
+
+== certificado público
+subject=CN = clickclak-utp.chilecentral.cloudapp.azure.com
+issuer=C = US, O = Let's Encrypt, CN = YE2
+notBefore=Oct  3 07:59:38 2026 GMT
+notAfter=Jan  1 07:59:37 2027 GMT
+
+== acceso externo sin omitir la validación TLS
+campo=200 ssl_verify_result=0
+admin=200 ssl_verify_result=0
+
+== comprobación visual en navegador
+Campo: cargó https://clickclak-utp.chilecentral.cloudapp.azure.com/login con título "ClickClak".
+Administración: cargó https://clickclak-utp.chilecentral.cloudapp.azure.com:8443/login con título "ClickClak — Panel administrativo".
+Resultado: ambas aplicaciones abrieron directamente, sin intersticio ni advertencia de certificado.
+
+== HSTS
+443:  Strict-Transport-Security: max-age=31536000
+8443: Strict-Transport-Security: max-age=31536000
+
+== renovación automática
+Certbot: 2.9.0
+certbot.timer: habilitado y activo
+Hook: /etc/letsencrypt/renewal-hooks/deploy/recargar-clickclak-proxy
+Prueba: certbot renew --dry-run --run-deploy-hooks
+Resultado: todas las renovaciones simuladas correctas; el hook recargó Nginx.
+
+== verificación del despliegue después de emitir el certificado
+Contenedores: 6/6 activos
+Proxy, API y acceso real: correctos
+Seguridad web: HSTS presente y coherente con el certificado real
+Replicación de PostgreSQL: 12/12 comprobaciones correctas
+Resultado total: 52/52 comprobaciones correctas
+
+Verificación completa: todo en orden.

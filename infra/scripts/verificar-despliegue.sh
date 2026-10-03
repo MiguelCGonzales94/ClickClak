@@ -28,7 +28,7 @@ for servicio in postgres postgres-replica backend frontend-admin frontend-campo 
     esac
 done
 
-echo "== proxy (HTTPS con certificado temporal: curl -k)"
+echo "== proxy (curl -k para probar por localhost)"
 # Con el Host real: es lo que ve un usuario que entra por el nombre DNS.
 resultado "HTTP 80 redirige a HTTPS" "301" "$(codigo -H "Host: $DOMINIO" http://localhost/)"
 resultado "HTTPS 443: app de campo" "200" "$(codigo https://localhost/)"
@@ -74,7 +74,9 @@ for destino in "443:https://localhost/" "8443:https://localhost:8443/"; do
     resultado "[$puerto] el servidor no revela su versión" "presente" "$(tiene '^server: nginx\s*$')"
 done
 # HSTS solo con certificado real: sobre el autofirmado dejaría el sitio inaccesible en los navegadores.
-if [ -f "/etc/letsencrypt/live/$DOMINIO/fullchain.pem" ]; then ESPERADO_HSTS="presente"; else ESPERADO_HSTS="ausente"; fi
+# /etc/letsencrypt restringe el recorrido al usuario root. Sin sudo, `test -f` devuelve falso
+# aunque el certificado exista y el proxy (que corre como root en el contenedor) lo esté usando.
+if sudo test -f "/etc/letsencrypt/live/$DOMINIO/fullchain.pem"; then ESPERADO_HSTS="presente"; else ESPERADO_HSTS="ausente"; fi
 HSTS=$(cabeceras https://localhost/ | grep -qi '^strict-transport-security:' && echo presente || echo ausente)
 resultado "HSTS acorde al certificado (esperado: $ESPERADO_HSTS)" "$ESPERADO_HSTS" "$HSTS"
 resultado "API sin cabeceras duplicadas (nosniff una sola vez)" "1" "$(cabeceras https://localhost/api/incidencias/mias | grep -ci '^x-content-type-options:')"

@@ -108,7 +108,9 @@ El panel va en un puerto aparte y no en una ruta `/admin` porque el service work
 
 ### Estado de TLS
 
-El proxy sirve HTTPS con un **certificado autofirmado temporal**, así que el navegador muestra una advertencia. **Pendiente:** emitir el certificado de Let's Encrypt sobre el nombre DNS de Azure. Requiere aceptar los términos de servicio de Let's Encrypt y decidir el correo de contacto para los avisos de vencimiento, y por eso no se hizo automáticamente. Cuando exista, hay que recrear el proxy una vez (`docker compose up -d --force-recreate proxy`); las renovaciones no lo requieren. Las cabeceras de seguridad (HSTS, CSP) y el rate limiting quedan para CLICKCLACK-57, porque HSTS no debe activarse sobre un certificado autofirmado.
+**Resultado probado (3-oct-2026).** El proxy usa un certificado válido de Let's Encrypt para `clickclak-utp.chilecentral.cloudapp.azure.com`, emitido por `YE2` y vigente hasta el 1-ene-2027. La cadena TLS se validó sin omitir errores en los puertos 443 y 8443, ambos con respuesta 200. HSTS está activo en los dos puertos con `max-age=31536000`.
+
+Certbot 2.9.0 quedó instalado con su temporizador de systemd activo. El hook versionado [`scripts/recargar-proxy-tras-renovacion.sh`](../../infra/scripts/recargar-proxy-tras-renovacion.sh) recarga Nginx únicamente después de una renovación correcta. `certbot renew --dry-run --run-deploy-hooks` renovó contra el entorno de pruebas y ejecutó el hook sin fallos. El correo de contacto está configurado en Certbot, pero no se publica en el repositorio.
 
 ### Qué queda expuesto y qué no
 
@@ -133,9 +135,23 @@ sh scripts/verificar-despliegue.sh   # prueba de humo
 
 `desplegar.sh` construye las imágenes de una en una porque compilar el backend y los dos frontends a la vez agotaría la memoria de la VM.
 
+Después de aceptar los términos de Let's Encrypt y definir el correo del equipo, el certificado y la renovación se configuran una sola vez:
+
+```bash
+sudo apt-get install -y certbot
+sudo certbot certonly --webroot --webroot-path /var/www/certbot \
+  --domain clickclak-utp.chilecentral.cloudapp.azure.com \
+  --email <correo-del-equipo> --agree-tos --no-eff-email --non-interactive
+sudo install -m 0755 scripts/recargar-proxy-tras-renovacion.sh \
+  /etc/letsencrypt/renewal-hooks/deploy/recargar-clickclak-proxy
+sudo docker compose -f docker-compose.prod.yml --env-file .env \
+  up -d --force-recreate --no-deps proxy
+sudo certbot renew --dry-run --run-deploy-hooks
+```
+
 ### Verificación
 
-**Resultado probado (3-oct-2026).** `scripts/verificar-despliegue.sh` ejecutó **52 comprobaciones y las 52 pasaron** sobre el despliegue reconstruido desde `main`: 40 comprobaciones de contenedores, proxy, acceso real y seguridad web, más 12 de replicación de PostgreSQL. La salida completa está en [`evidencia/despliegue-main-2026-10-03.txt`](evidencia/despliegue-main-2026-10-03.txt).
+**Resultado probado (3-oct-2026).** `scripts/verificar-despliegue.sh` ejecutó **52 comprobaciones y las 52 pasaron** sobre el despliegue reconstruido desde `main`: 40 comprobaciones de contenedores, proxy, acceso real y seguridad web, más 12 de replicación de PostgreSQL. La ejecución posterior a Let's Encrypt confirmó HSTS presente. Evidencias: [`evidencia/despliegue-main-2026-10-03.txt`](evidencia/despliegue-main-2026-10-03.txt) y [`evidencia/letsencrypt-hsts-2026-10-03.txt`](evidencia/letsencrypt-hsts-2026-10-03.txt).
 
 ### Consumo medido
 
