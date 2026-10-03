@@ -1,6 +1,7 @@
-# El entrypoint de la imagen de Nginx hace `source` de los archivos *.envsh (los *.sh sin permiso
-# de ejecución los ignora), así que lo que se exporta aquí lo ve la sustitución de plantillas que
-# viene después (20-envsubst-on-templates.sh).
+# El entrypoint de la imagen de Nginx hace `source` de los archivos *.envsh, así que lo que se
+# exporta aquí lo ve la sustitución de plantillas que viene después (20-envsubst-on-templates.sh).
+# OJO: el entrypoint IGNORA el archivo si no tiene permiso de ejecución. Por eso va con el bit +x
+# en git y scripts/desplegar.sh lo reafirma (Windows no conserva permisos al copiar archivos).
 #
 # Elige el certificado: el real de Let's Encrypt si ya existe; si no, el autofirmado temporal que
 # prepara scripts/desplegar.sh. La primera vez que aparezca el certificado real hay que RECREAR el

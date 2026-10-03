@@ -40,6 +40,7 @@ for servicio in backend frontend-admin frontend-campo; do
     $COMPOSE build "$servicio"
 done
 
-# 4. Arranque
+# 4. Arranque. El proxy ignora el selector de certificado si no es ejecutable (ver el propio archivo).
+chmod +x nginx/10-seleccionar-certificado.envsh
 $COMPOSE up -d
 $COMPOSE ps
