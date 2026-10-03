@@ -74,6 +74,8 @@ export function FormularioIncidencia({ usuarios, onCerrar, onCreada }: Props) {
         aria-modal="true"
         aria-labelledby="titulo-formulario-incidencia"
         onSubmit={manejarEnviar}
+        // El error del servidor (por ejemplo un 409) describe los datos anteriores: se retira al editar cualquier campo.
+        onChange={() => setError(null)}
         className="relative w-full max-w-lg bg-superficie rounded-md shadow-tarjeta p-6 flex flex-col gap-4"
       >
         <div className="flex items-center justify-between">
