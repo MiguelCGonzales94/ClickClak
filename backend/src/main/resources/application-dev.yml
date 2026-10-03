@@ -5,6 +5,10 @@ spring:
     password: clickclak
   jpa:
     show-sql: true
+  flyway:
+    # Además del esquema, en desarrollo se carga la semilla (administrador de pruebas).
+    # El perfil prod no lo hace: usa solo classpath:db/migration (ver application.yml).
+    locations: classpath:db/migration,classpath:db/dev
 
 clickclak:
   seguridad:
