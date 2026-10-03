@@ -2,6 +2,8 @@ package com.clickclak.backend.service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 
@@ -15,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.clickclak.backend.dto.RegistrarMarcacionRequest;
 import com.clickclak.backend.exception.DispositivoNoAutorizadoException;
 import com.clickclak.backend.exception.RecursoNoEncontradoException;
+import com.clickclak.backend.exception.SolicitudInvalidaException;
 import com.clickclak.backend.model.Asignacion;
 import com.clickclak.backend.model.Dispositivo;
 import com.clickclak.backend.model.EstadoValidacion;
@@ -39,6 +42,9 @@ public class MarcacionService {
 
     /** Perú no tiene horario de verano: zona fija, sin necesidad de resolverla por usuario. */
     private static final ZoneId ZONA_HORARIA_PERU = ZoneId.of("America/Lima");
+
+    /** Desfase de reloj tolerado entre el dispositivo y el servidor. Un evento más adelantado se rechaza. */
+    private static final Duration TOLERANCIA_RELOJ = Duration.ofMinutes(5);
 
     private static final GeometryFactory FABRICA_GEOMETRIA = new GeometryFactory(new PrecisionModel(), 4326);
 
@@ -74,6 +80,11 @@ public class MarcacionService {
             // Reintento de sincronización offline (OE4): se devuelve la marcación ya
             // registrada en vez de duplicarla o fallar.
             return existente.get();
+        }
+
+        if (solicitud.horaEvento().isAfter(Instant.now().plus(TOLERANCIA_RELOJ))) {
+            // Un evento "del futuro" delata un reloj manipulado o un cuerpo alterado.
+            throw new SolicitudInvalidaException("La hora del evento no puede ser futura");
         }
 
         Usuario usuario = usuarioRepository.findById(solicitud.usuarioId())
