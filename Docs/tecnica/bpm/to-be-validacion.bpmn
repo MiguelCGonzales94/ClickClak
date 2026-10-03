@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definiciones_to-be-validacion" targetNamespace="http://clickclak.local/bpm">
+  <collaboration id="Colaboracion_to-be-validacion">
+    <participant id="Pool_to-be-validacion" name="TO-BE: validación en servidor" processRef="Proceso_to-be-validacion" />
+  </collaboration>
+  <process id="Proceso_to-be-validacion" isExecutable="false">
+    <laneSet>
+      <lane id="Lane_srv" name="Servidor (API y motor de validación)">
+        <flowNodeRef>v_ini</flowNodeRef>
+        <flowNodeRef>v_g1</flowNodeRef>
+        <flowNodeRef>v_dev</flowNodeRef>
+        <flowNodeRef>v_fdev</flowNodeRef>
+        <flowNodeRef>v_g2</flowNodeRef>
+        <flowNodeRef>v_fer</flowNodeRef>
+        <flowNodeRef>v_bus</flowNodeRef>
+        <flowNodeRef>v_g3</flowNodeRef>
+        <flowNodeRef>v_sin</flowNodeRef>
+        <flowNodeRef>v_cal</flowNodeRef>
+        <flowNodeRef>v_reg</flowNodeRef>
+        <flowNodeRef>v_g4</flowNodeRef>
+        <flowNodeRef>v_tar</flowNodeRef>
+        <flowNodeRef>v_fin</flowNodeRef>
+      </lane>
+    </laneSet>
+    <startEvent id="v_ini" name="Marcación recibida"><outgoing>Flujo_0</outgoing><messageEventDefinition /></startEvent>
+    <exclusiveGateway id="v_g1" name="¿El uuid ya está registrado?"><incoming>Flujo_0</incoming><outgoing>Flujo_1</outgoing><outgoing>Flujo_3</outgoing></exclusiveGateway>
+    <serviceTask id="v_dev" name="Devolver la marcación ya registrada"><incoming>Flujo_1</incoming><outgoing>Flujo_2</outgoing></serviceTask>
+    <endEvent id="v_fdev" name="Reintento sin duplicar"><incoming>Flujo_2</incoming></endEvent>
+    <exclusiveGateway id="v_g2" name="¿Dispositivo activo y del colaborador?"><incoming>Flujo_3</incoming><outgoing>Flujo_4</outgoing><outgoing>Flujo_5</outgoing></exclusiveGateway>
+    <endEvent id="v_fer" name="Rechazada: dispositivo no autorizado (403)"><incoming>Flujo_4</incoming><errorEventDefinition /></endEvent>
+    <serviceTask id="v_bus" name="Buscar la asignación vigente en la fecha del evento"><incoming>Flujo_5</incoming><outgoing>Flujo_6</outgoing></serviceTask>
+    <exclusiveGateway id="v_g3" name="¿Hay asignación vigente?"><incoming>Flujo_6</incoming><outgoing>Flujo_7</outgoing><outgoing>Flujo_8</outgoing></exclusiveGateway>
+    <serviceTask id="v_sin" name="Estado: sin asignación vigente"><incoming>Flujo_8</incoming><outgoing>Flujo_9</outgoing></serviceTask>
+    <serviceTask id="v_cal" name="Calcular la distancia y validar la ubicación"><incoming>Flujo_7</incoming><outgoing>Flujo_10</outgoing></serviceTask>
+    <serviceTask id="v_reg" name="Registrar la marcación con su estado de validación"><incoming>Flujo_9</incoming><incoming>Flujo_10</incoming><outgoing>Flujo_11</outgoing></serviceTask>
+    <exclusiveGateway id="v_g4" name="¿Ingreso con tardanza?"><incoming>Flujo_11</incoming><outgoing>Flujo_12</outgoing><outgoing>Flujo_13</outgoing></exclusiveGateway>
+    <serviceTask id="v_tar" name="Generar la incidencia de tardanza (autor: el sistema)"><incoming>Flujo_12</incoming><outgoing>Flujo_14</outgoing></serviceTask>
+    <endEvent id="v_fin" name="Marcación registrada"><incoming>Flujo_13</incoming><incoming>Flujo_14</incoming></endEvent>
+    <sequenceFlow id="Flujo_0" sourceRef="v_ini" targetRef="v_g1" />
+    <sequenceFlow id="Flujo_1" sourceRef="v_g1" targetRef="v_dev" name="Sí" />
+    <sequenceFlow id="Flujo_2" sourceRef="v_dev" targetRef="v_fdev" />
+    <sequenceFlow id="Flujo_3" sourceRef="v_g1" targetRef="v_g2" name="No" />
+    <sequenceFlow id="Flujo_4" sourceRef="v_g2" targetRef="v_fer" name="No" />
+    <sequenceFlow id="Flujo_5" sourceRef="v_g2" targetRef="v_bus" name="Sí" />
+    <sequenceFlow id="Flujo_6" sourceRef="v_bus" targetRef="v_g3" />
+    <sequenceFlow id="Flujo_7" sourceRef="v_g3" targetRef="v_cal" name="Sí" />
+    <sequenceFlow id="Flujo_8" sourceRef="v_g3" targetRef="v_sin" name="No" />
+    <sequenceFlow id="Flujo_9" sourceRef="v_sin" targetRef="v_reg" />
+    <sequenceFlow id="Flujo_10" sourceRef="v_cal" targetRef="v_reg" />
+    <sequenceFlow id="Flujo_11" sourceRef="v_reg" targetRef="v_g4" />
+    <sequenceFlow id="Flujo_12" sourceRef="v_g4" targetRef="v_tar" name="Sí" />
+    <sequenceFlow id="Flujo_13" sourceRef="v_g4" targetRef="v_fin" name="No" />
+    <sequenceFlow id="Flujo_14" sourceRef="v_tar" targetRef="v_fin" />
+    <textAnnotation id="vn1"><text>Estados: VALIDO si, aun con el error del GPS, sigue dentro del radio; OBSERVADO si podría estar dentro; FUERA_DE_TOLERANCIA si no; SOSPECHOSO si falta la precisión o supera 500 m.</text></textAnnotation>
+    <association id="Asoc_vn1" sourceRef="v_cal" targetRef="vn1" />
+    <textAnnotation id="vn2"><text>No implementado: los controles del Capítulo 1 contra ubicaciones falsas (coherencia de desplazamiento entre marcaciones y contraste con la IP). Hoy solo se evalúa la precisión.</text></textAnnotation>
+    <association id="Asoc_vn2" sourceRef="v_cal" targetRef="vn2" />
+    <textAnnotation id="vn3"><text>La incidencia nace en estado REGISTRADA y sigue el flujo de gestión de incidencias.</text></textAnnotation>
+    <association id="Asoc_vn3" sourceRef="v_tar" targetRef="vn3" />
+  </process>
+  <bpmndi:BPMNDiagram id="Diagrama_1">
+    <bpmndi:BPMNPlane id="Plano_1" bpmnElement="Colaboracion_to-be-validacion">
+      <bpmndi:BPMNShape id="Forma_Pool" bpmnElement="Pool_to-be-validacion" isHorizontal="true"><dc:Bounds x="30" y="174" width="2090" height="310" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_Lane_srv" bpmnElement="Lane_srv" isHorizontal="true"><dc:Bounds x="60" y="174" width="2060" height="310" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_v_ini" bpmnElement="v_ini"><dc:Bounds x="192" y="311" width="36" height="36" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_v_g1" bpmnElement="v_g1" isMarkerVisible="true"><dc:Bounds x="365" y="304" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="268" y="355" width="96" height="46" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_v_dev" bpmnElement="v_dev"><dc:Bounds x="330" y="187" width="120" height="84" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_v_fdev" bpmnElement="v_fdev"><dc:Bounds x="552" y="211" width="36" height="36" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_v_g2" bpmnElement="v_g2" isMarkerVisible="true"><dc:Bounds x="545" y="304" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="448" y="257" width="96" height="46" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_v_fer" bpmnElement="v_fer"><dc:Bounds x="552" y="411" width="36" height="36" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_v_bus" bpmnElement="v_bus"><dc:Bounds x="690" y="287" width="120" height="84" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_v_g3" bpmnElement="v_g3" isMarkerVisible="true"><dc:Bounds x="905" y="304" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="808" y="257" width="96" height="46" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_v_sin" bpmnElement="v_sin"><dc:Bounds x="870" y="387" width="120" height="84" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_v_cal" bpmnElement="v_cal"><dc:Bounds x="1050" y="287" width="120" height="84" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_v_reg" bpmnElement="v_reg"><dc:Bounds x="1410" y="287" width="120" height="84" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_v_g4" bpmnElement="v_g4" isMarkerVisible="true"><dc:Bounds x="1625" y="304" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="1528" y="257" width="96" height="46" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_v_tar" bpmnElement="v_tar"><dc:Bounds x="1770" y="187" width="120" height="84" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_v_fin" bpmnElement="v_fin"><dc:Bounds x="1992" y="311" width="36" height="36" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Borde_0" bpmnElement="Flujo_0"><di:waypoint x="228" y="329" /><di:waypoint x="365" y="329" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_1" bpmnElement="Flujo_1"><di:waypoint x="390" y="304" /><di:waypoint x="390" y="271" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_2" bpmnElement="Flujo_2"><di:waypoint x="450" y="229" /><di:waypoint x="552" y="229" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_3" bpmnElement="Flujo_3"><di:waypoint x="415" y="329" /><di:waypoint x="545" y="329" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_4" bpmnElement="Flujo_4"><di:waypoint x="570" y="354" /><di:waypoint x="570" y="411" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_5" bpmnElement="Flujo_5"><di:waypoint x="595" y="329" /><di:waypoint x="690" y="329" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_6" bpmnElement="Flujo_6"><di:waypoint x="810" y="329" /><di:waypoint x="905" y="329" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_7" bpmnElement="Flujo_7"><di:waypoint x="955" y="329" /><di:waypoint x="1050" y="329" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_8" bpmnElement="Flujo_8"><di:waypoint x="930" y="354" /><di:waypoint x="930" y="387" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_9" bpmnElement="Flujo_9"><di:waypoint x="990" y="429" /><di:waypoint x="1470" y="429" /><di:waypoint x="1470" y="371" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_10" bpmnElement="Flujo_10"><di:waypoint x="1170" y="329" /><di:waypoint x="1410" y="329" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_11" bpmnElement="Flujo_11"><di:waypoint x="1530" y="329" /><di:waypoint x="1625" y="329" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_12" bpmnElement="Flujo_12"><di:waypoint x="1650" y="304" /><di:waypoint x="1650" y="229" /><di:waypoint x="1770" y="229" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_13" bpmnElement="Flujo_13"><di:waypoint x="1675" y="329" /><di:waypoint x="1992" y="329" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_14" bpmnElement="Flujo_14"><di:waypoint x="1890" y="229" /><di:waypoint x="2010" y="229" /><di:waypoint x="2010" y="311" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Forma_vn1" bpmnElement="vn1"><dc:Bounds x="965" y="509" width="290" height="89" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Borde_Asoc_vn1" bpmnElement="Asoc_vn1"><di:waypoint x="1110" y="509" /><di:waypoint x="1110" y="371" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Forma_vn2" bpmnElement="vn2"><dc:Bounds x="960" y="60" width="300" height="89" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Borde_Asoc_vn2" bpmnElement="Asoc_vn2"><di:waypoint x="1110" y="149" /><di:waypoint x="1110" y="287" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Forma_vn3" bpmnElement="vn3"><dc:Bounds x="1756" y="90" width="220" height="59" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Borde_Asoc_vn3" bpmnElement="Asoc_vn3"><di:waypoint x="1866" y="149" /><di:waypoint x="1830" y="187" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

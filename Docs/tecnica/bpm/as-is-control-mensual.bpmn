@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definiciones_as-is-control-mensual" targetNamespace="http://clickclak.local/bpm">
+  <collaboration id="Colaboracion_as-is-control-mensual">
+    <participant id="Pool_as-is-control-mensual" name="AS-IS: control mensual" processRef="Proceso_as-is-control-mensual" />
+  </collaboration>
+  <process id="Proceso_as-is-control-mensual" isExecutable="false">
+    <laneSet>
+      <lane id="Lane_col" name="Colaborador">
+        <flowNodeRef>a_comp</flowNodeRef>
+        <flowNodeRef>a_rem</flowNodeRef>
+      </lane>
+      <lane id="Lane_rrhh" name="Recursos Humanos">
+        <flowNodeRef>a_ini</flowNodeRef>
+        <flowNodeRef>a_dist</flowNodeRef>
+        <flowNodeRef>a_rec</flowNodeRef>
+        <flowNodeRef>a_cons</flowNodeRef>
+        <flowNodeRef>a_fin</flowNodeRef>
+      </lane>
+    </laneSet>
+    <startEvent id="a_ini" name="Inicio de mes"><outgoing>Flujo_0</outgoing><timerEventDefinition /></startEvent>
+    <manualTask id="a_dist" name="Distribuir la hoja de cálculo mensual"><incoming>Flujo_0</incoming><outgoing>Flujo_1</outgoing></manualTask>
+    <manualTask id="a_comp" name="Completar la hoja con la asistencia del periodo"><incoming>Flujo_1</incoming><outgoing>Flujo_2</outgoing></manualTask>
+    <manualTask id="a_rem" name="Remitir el archivo a Recursos Humanos"><incoming>Flujo_2</incoming><outgoing>Flujo_3</outgoing></manualTask>
+    <manualTask id="a_rec" name="Recibir los archivos de todos los colaboradores"><incoming>Flujo_3</incoming><outgoing>Flujo_4</outgoing></manualTask>
+    <manualTask id="a_cons" name="Consolidar los archivos manualmente"><incoming>Flujo_4</incoming><outgoing>Flujo_5</outgoing></manualTask>
+    <endEvent id="a_fin" name="Asistencia del mes consolidada"><incoming>Flujo_5</incoming></endEvent>
+    <sequenceFlow id="Flujo_0" sourceRef="a_ini" targetRef="a_dist" />
+    <sequenceFlow id="Flujo_1" sourceRef="a_dist" targetRef="a_comp" />
+    <sequenceFlow id="Flujo_2" sourceRef="a_comp" targetRef="a_rem" />
+    <sequenceFlow id="Flujo_3" sourceRef="a_rem" targetRef="a_rec" />
+    <sequenceFlow id="Flujo_4" sourceRef="a_rec" targetRef="a_cons" />
+    <sequenceFlow id="Flujo_5" sourceRef="a_cons" targetRef="a_fin" />
+    <textAnnotation id="an1"><text>Retrospectivo y autodeclarado: se registra lo que el colaborador recuerda o estima, sin verificar el lugar (limitaciones a y c).</text></textAnnotation>
+    <association id="Asoc_an1" sourceRef="a_comp" targetRef="an1" />
+    <textAnnotation id="an2"><text>Nada acredita quién completó o remitió el archivo, y el archivo es editable sin dejar traza de cambios (limitaciones b y d).</text></textAnnotation>
+    <association id="Asoc_an2" sourceRef="a_rem" targetRef="an2" />
+    <textAnnotation id="an3"><text>Supuesto: la distribuye Recursos Humanos. El Capítulo 1 no indica quién envía la hoja.</text></textAnnotation>
+    <association id="Asoc_an3" sourceRef="a_dist" targetRef="an3" />
+    <textAnnotation id="an4"><text>Recursos Humanos transcribe, no valida; el esfuerzo crece con la plantilla (limitación f).</text></textAnnotation>
+    <association id="Asoc_an4" sourceRef="a_cons" targetRef="an4" />
+    <textAnnotation id="an5"><text>El dato existe solo al cierre del periodo y las incidencias no tienen flujo formal de registro, revisión y aprobación (limitación e).</text></textAnnotation>
+    <association id="Asoc_an5" sourceRef="a_fin" targetRef="an5" />
+  </process>
+  <bpmndi:BPMNDiagram id="Diagrama_1">
+    <bpmndi:BPMNPlane id="Plano_1" bpmnElement="Colaboracion_as-is-control-mensual">
+      <bpmndi:BPMNShape id="Forma_Pool" bpmnElement="Pool_as-is-control-mensual" isHorizontal="true"><dc:Bounds x="30" y="174" width="1370" height="260" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_Lane_col" bpmnElement="Lane_col" isHorizontal="true"><dc:Bounds x="60" y="174" width="1340" height="130" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_Lane_rrhh" bpmnElement="Lane_rrhh" isHorizontal="true"><dc:Bounds x="60" y="304" width="1340" height="130" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_a_ini" bpmnElement="a_ini"><dc:Bounds x="192" y="351" width="36" height="36" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_a_dist" bpmnElement="a_dist"><dc:Bounds x="330" y="327" width="120" height="84" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_a_comp" bpmnElement="a_comp"><dc:Bounds x="510" y="197" width="120" height="84" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_a_rem" bpmnElement="a_rem"><dc:Bounds x="690" y="197" width="120" height="84" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_a_rec" bpmnElement="a_rec"><dc:Bounds x="870" y="327" width="120" height="84" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_a_cons" bpmnElement="a_cons"><dc:Bounds x="1050" y="327" width="120" height="84" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_a_fin" bpmnElement="a_fin"><dc:Bounds x="1272" y="351" width="36" height="36" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Borde_0" bpmnElement="Flujo_0"><di:waypoint x="228" y="369" /><di:waypoint x="330" y="369" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_1" bpmnElement="Flujo_1"><di:waypoint x="390" y="327" /><di:waypoint x="390" y="239" /><di:waypoint x="510" y="239" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_2" bpmnElement="Flujo_2"><di:waypoint x="630" y="239" /><di:waypoint x="690" y="239" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_3" bpmnElement="Flujo_3"><di:waypoint x="750" y="281" /><di:waypoint x="750" y="369" /><di:waypoint x="870" y="369" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_4" bpmnElement="Flujo_4"><di:waypoint x="990" y="369" /><di:waypoint x="1050" y="369" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_5" bpmnElement="Flujo_5"><di:waypoint x="1170" y="369" /><di:waypoint x="1272" y="369" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Forma_an1" bpmnElement="an1"><dc:Bounds x="455" y="60" width="230" height="89" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Borde_Asoc_an1" bpmnElement="Asoc_an1"><di:waypoint x="570" y="149" /><di:waypoint x="570" y="197" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Forma_an2" bpmnElement="an2"><dc:Bounds x="797" y="60" width="230" height="89" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Borde_Asoc_an2" bpmnElement="Asoc_an2"><di:waypoint x="912" y="149" /><di:waypoint x="750" y="197" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Forma_an3" bpmnElement="an3"><dc:Bounds x="285" y="459" width="210" height="74" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Borde_Asoc_an3" bpmnElement="Asoc_an3"><di:waypoint x="390" y="459" /><di:waypoint x="390" y="411" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Forma_an4" bpmnElement="an4"><dc:Bounds x="856" y="459" width="220" height="74" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Borde_Asoc_an4" bpmnElement="Asoc_an4"><di:waypoint x="966" y="459" /><di:waypoint x="1110" y="411" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Forma_an5" bpmnElement="an5"><dc:Bounds x="1188" y="459" width="240" height="89" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Borde_Asoc_an5" bpmnElement="Asoc_an5"><di:waypoint x="1308" y="459" /><di:waypoint x="1290" y="387" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>
