@@ -10,6 +10,7 @@ const ENLACES_NAV: { a: string; etiqueta: string; icono: NombreIcono; fin?: bool
   { a: "/sedes", etiqueta: "Sedes y servicios", icono: "edificio" },
   { a: "/turnos", etiqueta: "Turnos", icono: "turnos" },
   { a: "/asignaciones", etiqueta: "Asignaciones", icono: "asignaciones" },
+  { a: "/incidencias", etiqueta: "Incidencias", icono: "incidencias" },
 ];
 
 /** Shell del panel: sidebar oscuro fijo + contenido claro, estilo pedido por el usuario. */

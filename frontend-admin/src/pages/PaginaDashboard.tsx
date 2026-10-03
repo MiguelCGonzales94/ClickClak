@@ -1,11 +1,20 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { servicioAsignaciones } from "../services/servicioAsignaciones";
 import { servicioHorarios } from "../services/servicioHorarios";
+import { servicioIncidencias } from "../services/servicioIncidencias";
 import { servicioProyectos } from "../services/servicioProyectos";
 import { servicioUsuarios } from "../services/servicioUsuarios";
 import { useSesion } from "../store/ContextoSesion";
 import { Icono, type NombreIcono } from "../components/Iconos";
-import type { RespuestaAsignacion, RespuestaHorario, RespuestaProyecto, RespuestaUsuario } from "../types/api";
+import { contarPorEstado } from "../incidencias/reglas";
+import type {
+  RespuestaAsignacion,
+  RespuestaHorario,
+  RespuestaIncidencia,
+  RespuestaProyecto,
+  RespuestaUsuario,
+} from "../types/api";
 
 interface Tarjeta {
   etiqueta: string;
@@ -13,6 +22,8 @@ interface Tarjeta {
   nota: string;
   icono: NombreIcono;
   tono: string;
+  /** Si existe, la tarjeta ofrece un enlace a esa ruta. */
+  enlace?: { a: string; texto: string };
 }
 
 /** Resumen general: solo métricas reales de lo que ya existe en el sistema (sin cifras inventadas). */
@@ -22,6 +33,7 @@ export function PaginaDashboard() {
   const [proyectos, setProyectos] = useState<RespuestaProyecto[]>([]);
   const [horarios, setHorarios] = useState<RespuestaHorario[]>([]);
   const [asignaciones, setAsignaciones] = useState<RespuestaAsignacion[]>([]);
+  const [incidencias, setIncidencias] = useState<RespuestaIncidencia[]>([]);
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
@@ -31,12 +43,14 @@ export function PaginaDashboard() {
       servicioProyectos.listar(token),
       servicioHorarios.listar(token),
       servicioAsignaciones.listar(token),
+      servicioIncidencias.listar(token),
     ])
-      .then(([u, p, h, a]) => {
+      .then(([u, p, h, a, i]) => {
         setUsuarios(u);
         setProyectos(p);
         setHorarios(h);
         setAsignaciones(a);
+        setIncidencias(i);
       })
       .finally(() => setCargando(false));
   }, [token]);
@@ -44,6 +58,8 @@ export function PaginaDashboard() {
   const tecnicos = usuarios.filter((u) => u.rol === "COLABORADOR");
   const activos = usuarios.filter((u) => u.activo);
   const asignacionesVigentes = asignaciones.filter((a) => a.estado === "VIGENTE");
+  const conteoIncidencias = contarPorEstado(incidencias);
+  const incidenciasPorRevisar = conteoIncidencias.REGISTRADA + conteoIncidencias.EN_REVISION;
 
   const tarjetas: Tarjeta[] = [
     {
@@ -81,6 +97,14 @@ export function PaginaDashboard() {
       icono: "asignaciones",
       tono: "text-[#1B6B9A] bg-[#EAF7FF]",
     },
+    {
+      etiqueta: "Incidencias por revisar",
+      valor: incidenciasPorRevisar,
+      nota: `${conteoIncidencias.REGISTRADA} registradas · ${conteoIncidencias.EN_REVISION} en revisión`,
+      icono: "incidencias",
+      tono: "text-[#B4541A] bg-[#FFF1E6]",
+      enlace: { a: "/incidencias", texto: "Ir a la bandeja" },
+    },
   ];
 
   return (
@@ -113,6 +137,11 @@ export function PaginaDashboard() {
                 <div>
                   <p className="text-[32px] leading-none font-bold text-[#061229]">{tarjeta.valor}</p>
                   <p className="mt-3 text-sm text-[#66718A]">{tarjeta.nota}</p>
+                  {tarjeta.enlace && (
+                    <Link to={tarjeta.enlace.a} className="mt-2 inline-block text-sm font-semibold text-primario hover:underline">
+                      {tarjeta.enlace.texto} →
+                    </Link>
+                  )}
                 </div>
               </article>
             ))}

@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { EstructuraPanel } from "./components/EstructuraPanel";
 import { PaginaAsignaciones } from "./pages/PaginaAsignaciones";
 import { PaginaDashboard } from "./pages/PaginaDashboard";
+import { PaginaIncidencias } from "./pages/PaginaIncidencias";
 import { PaginaInicioSesion } from "./pages/PaginaInicioSesion";
 import { PaginaSedes } from "./pages/PaginaSedes";
 import { PaginaTurnos } from "./pages/PaginaTurnos";
@@ -24,6 +25,7 @@ export default function App() {
               <Route path="/sedes" element={<PaginaSedes />} />
               <Route path="/turnos" element={<PaginaTurnos />} />
               <Route path="/asignaciones" element={<PaginaAsignaciones />} />
+              <Route path="/incidencias" element={<PaginaIncidencias />} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
