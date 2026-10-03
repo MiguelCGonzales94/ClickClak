@@ -136,3 +136,47 @@ export interface SolicitudRegistrarAsignacion {
   fechaInicio: string;
   fechaFin?: string | null;
 }
+
+export type TipoIncidencia = "TARDANZA" | "AUSENCIA" | "OLVIDO_REGISTRO" | "PERMISO" | "JUSTIFICACION";
+
+export type EstadoIncidencia = "REGISTRADA" | "EN_REVISION" | "APROBADA" | "RECHAZADA" | "CERRADA";
+
+export interface RespuestaIncidencia {
+  id: number;
+  usuarioId: number;
+  nombreUsuario: string;
+  marcacionId: number | null;
+  tipo: TipoIncidencia;
+  estado: EstadoIncidencia;
+  fechaEvento: string;
+  descripcion: string;
+  creadoPorId: number;
+  nombreCreadoPor: string;
+  revisadoPorId: number | null;
+  nombreRevisadoPor: string | null;
+  comentarioRevision: string | null;
+  revisadoEn: string | null;
+  creadoEn: string;
+  actualizadoEn: string;
+}
+
+export interface RespuestaHistorialIncidencia {
+  estadoAnterior: EstadoIncidencia | null;
+  estadoNuevo: EstadoIncidencia;
+  usuarioId: number;
+  nombreUsuario: string;
+  comentario: string | null;
+  creadoEn: string;
+}
+
+export interface RespuestaDetalleIncidencia {
+  incidencia: RespuestaIncidencia;
+  historial: RespuestaHistorialIncidencia[];
+}
+
+export interface SolicitudRegistrarIncidencia {
+  usuarioId: number;
+  tipo: TipoIncidencia;
+  fechaEvento: string;
+  descripcion: string;
+}

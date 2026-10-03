@@ -7,6 +7,7 @@ export type NombreIcono =
   | "chevronIzquierda"
   | "dashboard"
   | "edificio"
+  | "incidencias"
   | "logout"
   | "pin"
   | "seguridad"
@@ -76,6 +77,13 @@ const trazos: Record<NombreIcono, JSX.Element> = {
       <path d="M8 12.5h3" />
       <path d="M8 16h3" />
       <path d="M4 20h16" />
+    </>
+  ),
+  incidencias: (
+    <>
+      <path d="M12 4.5 3.8 18.5h16.4L12 4.5Z" />
+      <path d="M12 10v4" />
+      <path d="M12 16.8h.01" />
     </>
   ),
   logout: (
