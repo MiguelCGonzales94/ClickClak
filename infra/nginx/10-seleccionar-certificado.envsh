@@ -1,0 +1,14 @@
+# El entrypoint de la imagen de Nginx hace `source` de los archivos *.envsh (los *.sh sin permiso
+# de ejecución los ignora), así que lo que se exporta aquí lo ve la sustitución de plantillas que
+# viene después (20-envsubst-on-templates.sh).
+#
+# Elige el certificado: el real de Let's Encrypt si ya existe; si no, el autofirmado temporal que
+# prepara scripts/desplegar.sh. La primera vez que aparezca el certificado real hay que RECREAR el
+# proxy (`docker compose up -d --force-recreate proxy`), porque esta elección solo se hace al
+# arrancar. Las renovaciones posteriores conservan la ruta y basta `nginx -s reload`.
+if [ -f "/etc/letsencrypt/live/${DOMINIO}/fullchain.pem" ]; then
+    export RUTA_CERT="/etc/letsencrypt/live/${DOMINIO}"
+else
+    export RUTA_CERT="/etc/tls-temporal"
+fi
+echo "10-seleccionar-certificado: usando el certificado de ${RUTA_CERT}"

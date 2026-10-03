@@ -1,0 +1,78 @@
+# Plantilla del proxy de producción. La imagen oficial de Nginx sustituye ${DOMINIO} y
+# ${RUTA_CERT} al arrancar (RUTA_CERT la fija 10-seleccionar-certificado.sh). Las variables
+# propias de Nginx ($host, $scheme…) no se tocan porque no están definidas como entorno.
+
+server_tokens off;
+client_max_body_size 10m;
+
+# --- HTTP: solo redirige a HTTPS y atiende el desafío de Let's Encrypt -------------------------
+server {
+    listen 80;
+    server_name ${DOMINIO};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# --- HTTPS 443: app de campo (PWA) y API -------------------------------------------------------
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name ${DOMINIO};
+
+    ssl_certificate     ${RUTA_CERT}/fullchain.pem;
+    ssl_certificate_key ${RUTA_CERT}/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:SSL:5m;
+    ssl_session_timeout 1h;
+
+    location /api/ {
+        proxy_pass http://backend:8080/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location / {
+        proxy_pass http://frontend-campo:80;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+# --- HTTPS 8443: panel administrativo y API ----------------------------------------------------
+# Puerto aparte (y no una ruta /admin) porque el service worker de la PWA, con alcance "/",
+# interceptaría las navegaciones a /admin y servería la app de campo en su lugar.
+server {
+    listen 8443 ssl;
+    http2 on;
+    server_name ${DOMINIO};
+
+    ssl_certificate     ${RUTA_CERT}/fullchain.pem;
+    ssl_certificate_key ${RUTA_CERT}/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:SSL:5m;
+    ssl_session_timeout 1h;
+
+    location /api/ {
+        proxy_pass http://backend:8080/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location / {
+        proxy_pass http://frontend-admin:80;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
