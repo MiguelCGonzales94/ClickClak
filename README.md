@@ -23,8 +23,27 @@ Ver [`CONTRIBUTING.md`](CONTRIBUTING.md) para el modelo de ramas, convención de
 
 ## Levantar el entorno local
 
+Stack completo con Docker:
+
+```powershell
+docker compose -f infra/docker-compose.yml up --build
+```
+
+Servicios publicados:
+
+| Servicio | URL |
+|---|---|
+| Panel administrativo | `http://localhost:5173` |
+| PWA de campo | `http://localhost:5174` |
+| Backend | `http://localhost:8080` |
+| Postgres/PostGIS | `localhost:5434` |
+
+Modo mixto para desarrollo rápido:
+
 1. Base de datos: `docker compose -f infra/docker-compose.yml up -d postgres` (Postgres+PostGIS, publicado en el puerto **5434** del host — no 5432/5433, ver nota abajo).
 2. Backend: `cd backend && ./mvnw spring-boot:run` (usa el Maven Wrapper, no requiere tener Maven instalado). Flyway aplica las migraciones automáticamente al arrancar.
-3. Tests: `cd backend && ./mvnw test`.
+3. Front admin: `cd frontend-admin && npm run dev`.
+4. Front campo: `cd frontend-campo && npm run dev`.
+5. Tests: `cd backend && ./mvnw test`.
 
 **Nota de puertos (por máquina, no del proyecto):** en algunos equipos del develop ya hay instancias nativas de PostgreSQL corriendo como servicio de Windows en 5432 y/o 5433. Si `docker compose up` no falla pero el backend no logra autenticarse, es señal de ese choque de puertos — cambiar el mapeo en `infra/docker-compose.yml` y en `backend/src/main/resources/application-dev.yml` a un puerto libre (verificar con `Get-NetTCPConnection -LocalPort <puerto>` en PowerShell).

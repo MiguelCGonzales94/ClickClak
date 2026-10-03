@@ -1,6 +1,6 @@
 import type { ErrorApi } from "../types/api";
 
-const URL_BASE = import.meta.env.VITE_API_URL;
+const URL_BASE = import.meta.env.VITE_API_URL ?? "";
 
 export class ErrorHttp extends Error {
   constructor(

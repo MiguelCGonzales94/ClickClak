@@ -1,6 +1,4 @@
-# Compose de desarrollo local — por ahora solo la base de datos.
-# El backend se agrega aquí cuando tenga un Dockerfile (pendiente); mientras tanto
-# se corre con `mvn spring-boot:run` apuntando a este Postgres.
+# Compose de desarrollo local completo: base de datos, API y dos frontends.
 services:
   postgres:
     image: postgis/postgis:16-3.4
@@ -22,6 +20,52 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  backend:
+    build:
+      context: ../backend
+    container_name: clickclak-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://postgres:5432/clickclak
+      DB_USER: clickclak
+      DB_PASSWORD: clickclak
+      JWT_SECRET: clickclak-desarrollo-clave-hmac-no-usar-en-produccion-cambiar-siempre
+      WEBAUTHN_RP_ID: localhost
+      WEBAUTHN_ORIGENES: http://localhost:5174,http://127.0.0.1:5174
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  frontend-admin:
+    build:
+      context: ../frontend-admin
+    container_name: clickclak-frontend-admin
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "5173:80"
+
+  frontend-campo:
+    build:
+      context: ../frontend-campo
+    container_name: clickclak-frontend-campo
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "5174:80"
 
 volumes:
   postgres_data:
