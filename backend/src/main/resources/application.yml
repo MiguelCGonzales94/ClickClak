@@ -33,3 +33,12 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+
+server:
+  error:
+    # Explícito aunque sean los valores por defecto: nunca se devuelven mensajes internos,
+    # trazas ni detalles de binding en las respuestas de error.
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+    include-exception: false
