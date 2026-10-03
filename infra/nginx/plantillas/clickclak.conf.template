@@ -1,9 +1,37 @@
 # Plantilla del proxy de producción. La imagen oficial de Nginx sustituye ${DOMINIO} y
-# ${RUTA_CERT} al arrancar (RUTA_CERT la fija 10-seleccionar-certificado.sh). Las variables
+# ${RUTA_CERT} al arrancar (RUTA_CERT la fija 10-seleccionar-certificado.envsh). Las variables
 # propias de Nginx ($host, $scheme…) no se tocan porque no están definidas como entorno.
+#
+# Controles de seguridad de esta capa (ver Docs/tecnica/seguridad-web.md):
+#   - TLS 1.2/1.3 con suites modernas, sin tickets de sesión.
+#   - Cabeceras de seguridad y CSP estricta (cabeceras-seguridad.inc), HSTS solo con certificado real.
+#   - Límite de peticiones por IP: más estricto en login y recuperación de clave que en el resto de la API.
+#   - Actuator y archivos ocultos nunca se enrutan; solo métodos HTTP conocidos; cuerpos de máximo 1 MiB.
+#   - Plazos cortos de cabeceras y cuerpo contra conexiones lentas (slowloris). El keep-alive ya lo
+#     fija el nginx.conf de la imagen y no puede repetirse en este nivel.
 
 server_tokens off;
-client_max_body_size 10m;
+client_max_body_size 1m;       # La API maneja JSON; si se suben adjuntos, ampliarlo solo en su ruta.
+client_header_timeout 10s;
+client_body_timeout 15s;
+send_timeout 30s;
+
+ssl_protocols TLSv1.2 TLSv1.3;
+ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
+ssl_prefer_server_ciphers off;
+ssl_session_cache shared:SSL:5m;
+ssl_session_timeout 1h;
+ssl_session_tickets off;
+
+# Límites por IP. El login y el flujo WebAuthn comparten cupo; la recuperación de clave, otro
+# más bajo. Con 10 peticiones por minuto y una ráfaga de 5, una persona escribiendo no los alcanza,
+# pero un script de fuerza bruta sí. Tras ellos, el backend bloquea además la cuenta (5 fallos).
+limit_req_zone $binary_remote_addr zone=zona_login:10m rate=10r/m;
+limit_req_zone $binary_remote_addr zone=zona_recuperacion:10m rate=6r/m;
+limit_req_zone $binary_remote_addr zone=zona_api:10m rate=20r/s;
+limit_conn_zone $binary_remote_addr zone=zona_conexiones:10m;
+limit_req_status 429;
+limit_conn_status 429;
 
 # --- HTTP: solo redirige a HTTPS y atiende el desafío de Let's Encrypt -------------------------
 server {
@@ -27,18 +55,8 @@ server {
 
     ssl_certificate     ${RUTA_CERT}/fullchain.pem;
     ssl_certificate_key ${RUTA_CERT}/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_session_cache shared:SSL:5m;
-    ssl_session_timeout 1h;
 
-    location /api/ {
-        proxy_pass http://backend:8080/api/;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
+    include /etc/nginx/conf.d/ubicaciones-comunes.inc;
 
     location / {
         proxy_pass http://frontend-campo:80;
@@ -57,18 +75,8 @@ server {
 
     ssl_certificate     ${RUTA_CERT}/fullchain.pem;
     ssl_certificate_key ${RUTA_CERT}/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_session_cache shared:SSL:5m;
-    ssl_session_timeout 1h;
 
-    location /api/ {
-        proxy_pass http://backend:8080/api/;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
+    include /etc/nginx/conf.d/ubicaciones-comunes.inc;
 
     location / {
         proxy_pass http://frontend-admin:80;

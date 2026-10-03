@@ -1,0 +1,18 @@
+# Cabeceras de seguridad de todas las respuestas HTTPS. `always` las añade también en errores.
+# OJO: Nginx hereda add_header en una location solo si ella no define ninguno propio; por eso
+# ninguna location de este proxy usa add_header.
+
+add_header X-Content-Type-Options "nosniff" always;
+add_header X-Frame-Options "DENY" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+add_header Cross-Origin-Opener-Policy "same-origin" always;
+
+# La PWA necesita el GPS para marcar (geolocation=self); el resto de sensores quedan cerrados.
+add_header Permissions-Policy "geolocation=(self), camera=(), microphone=(), payment=(), usb=()" always;
+
+# Los dos frontends son SPA de Vite sin recursos externos: todo sale del propio origen. Los
+# estilos admiten 'unsafe-inline' porque React emite atributos style; los scripts, no.
+add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+
+# HSTS lo decide 10-seleccionar-certificado.envsh: solo se activa con el certificado real.
+${HSTS_DIRECTIVA}
