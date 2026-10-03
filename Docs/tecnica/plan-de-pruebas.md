@@ -40,7 +40,7 @@ Demostrar, con evidencia, que la versión 1 cumple los objetivos específicos de
 | Spring Boot | 3.3.4 |
 | Base de datos | PostgreSQL 16.4 con PostGIS 3.4, en Docker (`postgis/postgis:16-3.4`), puerto 5434, base `clickclak` de **desarrollo** |
 | Node | 22.21.0 (npm 10.9.4) |
-| Navegador | Navegador integrado de Claude Code (basado en Chromium) |
+| Navegador | Navegador integrado basado en Chromium |
 | Estado probado | Simulacro local de la fusión en `main` de los 13 PR abiertos, sin subirlo (ver sección 5) |
 
 **Límites del entorno.**
