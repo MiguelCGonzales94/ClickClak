@@ -1,0 +1,18 @@
+# Normaliza los finales de línea. En Windows, con core.autocrlf=true, git convierte a CRLF al
+# extraer el árbol (y también en `git archive`); los scripts, los Dockerfile y la configuración
+# que se ejecutan dentro de contenedores Linux se rompen con ese `\r` ("./mvnw: not found").
+* text=auto
+
+# Siempre LF: se ejecutan o se interpretan en Linux.
+*.sh        text eol=lf
+*.envsh     text eol=lf
+*.cron      text eol=lf
+*.template  text eol=lf
+*.conf      text eol=lf
+Dockerfile  text eol=lf
+.dockerignore text eol=lf
+mvnw        text eol=lf
+
+# Siempre CRLF: los interpreta Windows.
+*.cmd text eol=crlf
+*.bat text eol=crlf
