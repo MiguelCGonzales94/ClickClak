@@ -1,0 +1,41 @@
+# Reglas que comparten los servidores HTTPS (443 y 8443). Se incluye desde clickclak.conf.
+
+if ($request_method !~ ^(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)$) {
+    return 405;
+}
+
+limit_conn zona_conexiones 40;
+
+include /etc/nginx/conf.d/cabeceras-seguridad.inc;
+
+# Archivos y carpetas ocultos (.env, .git…): nunca se sirven.
+location ~ /\. {
+    return 404;
+}
+
+# Las métricas y la salud del backend son internas: el proxy no las enruta.
+location ^~ /actuator {
+    return 404;
+}
+
+# Login y autenticación WebAuthn: el límite más estricto frente a la fuerza bruta.
+location = /api/auth/login {
+    limit_req zone=zona_login burst=5 nodelay;
+    include /etc/nginx/conf.d/proxy-backend.inc;
+}
+
+location ^~ /api/webauthn/autenticacion/ {
+    limit_req zone=zona_login burst=10 nodelay;
+    include /etc/nginx/conf.d/proxy-backend.inc;
+}
+
+# Recuperación de clave: público por diseño, así que con cupo propio y bajo.
+location ^~ /api/auth/recuperacion/ {
+    limit_req zone=zona_recuperacion burst=3 nodelay;
+    include /etc/nginx/conf.d/proxy-backend.inc;
+}
+
+location ^~ /api/ {
+    limit_req zone=zona_api burst=40 nodelay;
+    include /etc/nginx/conf.d/proxy-backend.inc;
+}
