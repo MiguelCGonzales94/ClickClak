@@ -14,7 +14,7 @@ Las etiquetas siguen la convención del proyecto: **Requerimiento**, **Supuesto*
 - **Decisión:** `upload-artifact` va en v6 y no en v5 porque la v5 todavía usa Node 20, que GitHub marcó como obsoleto; las demás acciones ya usan Node 24 desde la v5.
 - **Decisión:** los flujos corren en `ubuntu-24.04` y no en `ubuntu-latest`, porque GitHub anunció que esa etiqueta pasa a Ubuntu 26 el 19-oct-2026 y un cambio de sistema no debe llegar sin que nadie lo decida.
 - **Decisión:** el CI **no despliega**. Es integración continua, no entrega continua. El despliegue sigue siendo manual con `infra/scripts/desplegar.sh` (ver [despliegue-azure.md](despliegue-azure.md)).
-- **Decisión:** las ejecuciones repetidas sobre la misma rama se cancelan (`concurrency`), para no gastar minutos.
+- **Decisión:** las ejecuciones repetidas se cancelan (`concurrency`) **solo en pull requests**, para no gastar minutos cuando se suben varios commits seguidos a la misma rama. En `main`, en cambio, el grupo de cada ejecución es el propio commit, de modo que **ninguna se cancela y cada fusión conserva su resultado**. Se descubrió al fusionar varios pull requests en pocos segundos: dos ejecuciones del backend en `main` quedaron canceladas y sin resultado. No bastaba con desactivar la cancelación, porque GitHub también descarta las ejecuciones pendientes más antiguas de un mismo grupo.
 
 ## 2. Flujos
 

@@ -18,7 +18,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: infra-${{ github.ref }}
+  group: infra-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   cancel-in-progress: true
 
 jobs:
