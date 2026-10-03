@@ -14,6 +14,8 @@ services:
       POSTGRES_DB: clickclak
       POSTGRES_USER: clickclak
       POSTGRES_PASSWORD: ${DB_PASSWORD:?Falta DB_PASSWORD en infra/.env}
+      # Contraseña del rol `replicador`; la aplica scripts/preparar-primaria.sh en cada despliegue.
+      REPLICA_PASSWORD: ${REPLICA_PASSWORD:?Falta REPLICA_PASSWORD en infra/.env}
     command:
       - postgres
       - -c
@@ -24,13 +26,68 @@ services:
       - max_connections=50
       - -c
       - work_mem=4MB
+      # Replicación en streaming. La réplica exige max_connections y max_wal_senders iguales o
+      # mayores que los de la primaria, así que ambos servicios usan los mismos valores.
+      - -c
+      - wal_level=replica
+      - -c
+      - max_wal_senders=5
+      - -c
+      - max_replication_slots=2
+      # Tope del WAL que la ranura retiene si la réplica está caída: sin él, una réplica parada
+      # llenaría el disco de la VM. Si se supera, la réplica se reconstruye (ver replicacion-postgres.md).
+      - -c
+      - max_slot_wal_keep_size=2GB
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./postgres/replicacion:/replicacion:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U clickclak -d clickclak"]
       interval: 5s
       timeout: 5s
       retries: 10
+
+  # Réplica en caliente (hot standby): copia continua de la primaria por streaming. Acepta
+  # lecturas y rechaza escrituras. La aplicación NO se conecta a ella: existe para demostrar
+  # la replicación y poder promoverla si la primaria se pierde (ver Docs/tecnica/replicacion-postgres.md).
+  # Corre en la misma VM, así que no protege ante la caída de la VM.
+  postgres-replica:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_DB: clickclak
+      POSTGRES_USER: clickclak
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Falta DB_PASSWORD en infra/.env}
+      REPLICA_PASSWORD: ${REPLICA_PASSWORD:?Falta REPLICA_PASSWORD en infra/.env}
+    entrypoint: ["sh", "/replicacion/entrada-replica.sh"]
+    command:
+      - -c
+      - hot_standby=on
+      - -c
+      - shared_buffers=64MB
+      - -c
+      - effective_cache_size=256MB
+      - -c
+      - max_connections=50
+      - -c
+      - work_mem=4MB
+      - -c
+      - max_wal_senders=5
+      - -c
+      - max_replication_slots=2
+    volumes:
+      - postgres_replica_data:/var/lib/postgresql/data
+      - ./postgres/replicacion:/replicacion:ro
+    healthcheck:
+      # Sana = acepta conexiones Y está efectivamente en modo réplica.
+      test: ["CMD-SHELL", "pg_isready -U clickclak -d clickclak && psql -U clickclak -d clickclak -tAc 'SELECT pg_is_in_recovery()' | grep -q t"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   backend:
     build:
@@ -41,7 +98,9 @@ services:
         condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      DB_URL: jdbc:postgresql://postgres:5432/clickclak
+      # DB_HOST solo se define en infra/.env tras promover la réplica (ver replicacion-postgres.md);
+      # por defecto la aplicación usa la primaria.
+      DB_URL: jdbc:postgresql://${DB_HOST:-postgres}:5432/clickclak
       DB_USER: clickclak
       DB_PASSWORD: ${DB_PASSWORD:?Falta DB_PASSWORD en infra/.env}
       JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET en infra/.env}
@@ -104,3 +163,4 @@ services:
 
 volumes:
   postgres_data:
+  postgres_replica_data:

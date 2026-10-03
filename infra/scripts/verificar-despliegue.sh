@@ -19,7 +19,7 @@ resultado() { # $1 = descripción, $2 = esperado, $3 = obtenido
 codigo() { curl -ks -m 20 -o /dev/null -w '%{http_code}' "$@"; }
 
 echo "== contenedores"
-for servicio in postgres backend frontend-admin frontend-campo proxy; do
+for servicio in postgres postgres-replica backend frontend-admin frontend-campo proxy; do
     estado=$(sudo docker ps --filter "name=clickclak-$servicio-1" --format '{{.Status}}')
     case "$estado" in
         *unhealthy*|"")  resultado "contenedor $servicio" "activo" "${estado:-caído}" ;;
@@ -93,6 +93,16 @@ for i in 1 2 3 4 5 6 7 8; do
 done
 resultado "Recuperación de clave: la primera petición pasa" "200" "$PRIMERA"
 resultado "Recuperación de clave: la ráfaga recibe 429" "1" "$LIMITADO"
+
+echo "== replicación de Postgres (detalle en scripts/verificar-replicacion.sh)"
+if SALIDA_REPLICACION=$(sh scripts/verificar-replicacion.sh 2>&1); then
+    printf '%s
+' "$SALIDA_REPLICACION" | grep -E '^(OK|OMITIDO)'
+else
+    printf '%s
+' "$SALIDA_REPLICACION" | grep -E '^(OK|FALLA|OMITIDO)'
+    FALLOS=$((FALLOS + 1))
+fi
 
 echo
 if [ "$FALLOS" -eq 0 ]; then

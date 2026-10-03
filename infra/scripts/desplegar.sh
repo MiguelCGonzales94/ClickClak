@@ -20,6 +20,11 @@ if [ ! -f .env ]; then
     )
     echo "Creado infra/.env con secretos aleatorios (permisos 600)."
 fi
+# Despliegues anteriores a la réplica no tienen esta variable: se agrega sin tocar las demás.
+if ! grep -q '^REPLICA_PASSWORD=' .env; then
+    (umask 077; echo "REPLICA_PASSWORD=$(openssl rand -hex 24)" >> .env)
+    echo "Agregada REPLICA_PASSWORD a infra/.env."
+fi
 DOMINIO=$(sed -n 's/^DOMINIO=//p' .env)
 
 # 2. Certificado autofirmado temporal, para que el proxy arranque por HTTPS desde el primer
@@ -40,7 +45,12 @@ for servicio in backend frontend-admin frontend-campo; do
     $COMPOSE build "$servicio"
 done
 
-# 4. Arranque. El proxy ignora el selector de certificado si no es ejecutable (ver el propio archivo).
+# 4. Arranque. Primero la primaria, que se prepara para la replicación antes de que arranque la
+#    réplica (necesita el rol, la ranura y la regla de pg_hba). `--wait` espera a que esté sana.
+$COMPOSE up -d --wait postgres
+$COMPOSE exec -T -u postgres postgres sh /replicacion/preparar-primaria.sh
+
+# El proxy ignora el selector de certificado si no es ejecutable (ver el propio archivo).
 chmod +x nginx/10-seleccionar-certificado.envsh
 $COMPOSE up -d
 # El proxy lee su configuración de archivos montados: Compose no ve que cambiaron, así que no
