@@ -1,0 +1,4 @@
+# Apaga (desasigna) la VM cada día a las 23:00 de Lima = 04:00 UTC. Ver /usr/local/bin/apagar-vm.sh
+SHELL=/bin/sh
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+0 4 * * * root /usr/local/bin/apagar-vm.sh >> /var/log/clickclak-apagado.log 2>&1
