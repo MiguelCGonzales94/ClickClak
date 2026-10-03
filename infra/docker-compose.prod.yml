@@ -1,0 +1,106 @@
+# Compose de PRODUCCIÓN (VM de Azure). A diferencia del compose de desarrollo:
+#  - solo el proxy publica puertos; Postgres, backend y frontends quedan en la red interna;
+#  - no hay credenciales por defecto: todo secreto viene de infra/.env (ignorado por git);
+#  - el consumo de memoria está acotado porque la VM tiene 4 GiB (ver Docs/tecnica/despliegue-azure.md).
+#
+# Uso (en la VM, desde ~/clickclak/infra):  sh scripts/desplegar.sh
+name: clickclak
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: clickclak
+      POSTGRES_USER: clickclak
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Falta DB_PASSWORD en infra/.env}
+    command:
+      - postgres
+      - -c
+      - shared_buffers=128MB
+      - -c
+      - effective_cache_size=512MB
+      - -c
+      - max_connections=50
+      - -c
+      - work_mem=4MB
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clickclak -d clickclak"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ../backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://postgres:5432/clickclak
+      DB_USER: clickclak
+      DB_PASSWORD: ${DB_PASSWORD:?Falta DB_PASSWORD en infra/.env}
+      JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET en infra/.env}
+      # WebAuthn exige el dominio efectivo (rp-id) y el origen exacto con esquema.
+      WEBAUTHN_RP_ID: ${DOMINIO:?Falta DOMINIO en infra/.env}
+      WEBAUTHN_ORIGENES: https://${DOMINIO}
+      # Heap acotado: el resto de la memoria es de Postgres, Nginx y el sistema.
+      JAVA_TOOL_OPTIONS: -Xms128m -Xmx640m -XX:+UseSerialGC
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 40s
+
+  frontend-admin:
+    build:
+      context: ../frontend-admin
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  frontend-campo:
+    build:
+      context: ../frontend-campo
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  # Único punto de entrada público: termina TLS y reparte a los frontends y a la API.
+  #   443  -> app de campo (PWA)      8443 -> panel administrativo      80 -> redirección + desafío ACME
+  proxy:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend-admin:
+        condition: service_started
+      frontend-campo:
+        condition: service_started
+    environment:
+      DOMINIO: ${DOMINIO:?Falta DOMINIO en infra/.env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8443:8443"
+    volumes:
+      - ./nginx/plantillas:/etc/nginx/templates:ro
+      # Sin esto la imagen deja activa su página de bienvenida para cualquier Host "localhost".
+      - ./nginx/vacio.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/10-seleccionar-certificado.envsh:/docker-entrypoint.d/10-seleccionar-certificado.envsh:ro
+      # Certificado real de Let's Encrypt (lo gestiona certbot en el host) y, mientras no exista,
+      # uno autofirmado temporal para que el stack funcione desde el primer despliegue.
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /etc/clickclak/tls-temporal:/etc/tls-temporal:ro
+      - /var/www/certbot:/var/www/certbot:ro
+
+volumes:
+  postgres_data:

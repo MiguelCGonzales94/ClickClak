@@ -22,7 +22,7 @@ Una política de la universidad restringe la suscripción a cinco regiones: `wes
 
 ### Por qué ese tamaño
 
-- **Memoria (supuesto a validar al desplegar):** el compose lleva dos Postgres (primario y réplica), el backend, Nginx, Prometheus y Grafana. Se estima en 2 a 2,5 GiB, por lo que 4 GiB alcanzan con el swap como colchón.
+- **Memoria:** se estimó en 2 a 2,5 GiB para el stack completo (dos Postgres, backend, Nginx, Prometheus y Grafana). Medido tras el primer despliegue, con Postgres sin réplica y sin monitoreo todavía, los contenedores suman unos 350 MiB y el sistema usa 1,2 GiB de 3,9 (ver sección 6). 4 GiB alcanzan con holgura.
 - **Costo:** la variante de 8 GiB (`B2as_v2`) cuesta el doble y agotaría el crédito antes del cierre del curso.
 
 ## 2. Costo
@@ -83,7 +83,86 @@ az vm get-instance-view -g rg-clickclak -n vm-clickclak --query "instanceView.st
 
 > **Recordatorio:** hay que encender la VM antes de cada evaluación o sustentación. Un apagado a las 23:00 no avisa a nadie.
 
-## 6. Cómo recrearla
+## 6. Despliegue de la aplicación (v1)
+
+El 3 de octubre de 2026 se desplegó el stack completo en la VM con `infra/docker-compose.prod.yml`.
+
+```mermaid
+flowchart LR
+    U[Usuario] -->|80, redirige| P
+    U -->|443| P[Proxy Nginx<br/>TLS]
+    U -->|8443| P
+    P -->|/ en 443| C[frontend-campo<br/>PWA]
+    P -->|/ en 8443| A[frontend-admin<br/>panel]
+    P -->|/api| B[backend<br/>Spring Boot]
+    B --> D[(Postgres<br/>PostGIS)]
+```
+
+| URL | Qué es |
+|---|---|
+| `https://clickclak-utp.chilecentral.cloudapp.azure.com/` | App de campo (PWA) |
+| `https://clickclak-utp.chilecentral.cloudapp.azure.com:8443/` | Panel administrativo |
+| `http://clickclak-utp.chilecentral.cloudapp.azure.com/` | Redirige a HTTPS |
+
+El panel va en un puerto aparte y no en una ruta `/admin` porque el service worker de la PWA, con alcance `/`, interceptaría las navegaciones a `/admin` y serviría la app de campo en su lugar.
+
+### Estado de TLS
+
+El proxy sirve HTTPS con un **certificado autofirmado temporal**, así que el navegador muestra una advertencia. **Pendiente:** emitir el certificado de Let's Encrypt sobre el nombre DNS de Azure. Requiere aceptar los términos de servicio de Let's Encrypt y decidir el correo de contacto para los avisos de vencimiento, y por eso no se hizo automáticamente. Cuando exista, hay que recrear el proxy una vez (`docker compose up -d --force-recreate proxy`); las renovaciones no lo requieren. Las cabeceras de seguridad (HSTS, CSP) y el rate limiting quedan para CLICKCLACK-57, porque HSTS no debe activarse sobre un certificado autofirmado.
+
+### Qué queda expuesto y qué no
+
+- Solo el proxy publica puertos (80, 443 y 8443). Postgres, backend y frontends están en la red interna de Docker.
+- Las métricas de Actuator no son públicas: el proxy no enruta `/actuator`, y `/actuator/prometheus` devuelve la página de la app, no métricas.
+- Los secretos (`DB_PASSWORD` y `JWT_SECRET`) se generan con `openssl` en la VM, en `infra/.env` con permisos 600. No están en el repositorio.
+- En producción no existe la cuenta de desarrollo: la semilla es una migración repetible que solo carga el perfil `dev`. Las migraciones V1 y V2 se aplicaron limpias.
+
+### Primer administrador
+
+`scripts/crear-admin-inicial.sh` crea el usuario `admin@clickclak.local` (rol `RRHH_ADMIN`) con una contraseña aleatoria guardada solo en la VM, en `~/credenciales-admin-inicial.txt` con permisos 600. No se imprime ni se versiona. Hay que cambiarla tras el primer acceso y crear un administrador real desde el panel.
+
+### Procedimiento
+
+Desde la carpeta `infra/` del código copiado a la VM:
+
+```bash
+sh scripts/desplegar.sh              # genera secretos si faltan, construye y levanta el stack
+sh scripts/crear-admin-inicial.sh    # solo la primera vez
+sh scripts/verificar-despliegue.sh   # prueba de humo
+```
+
+`desplegar.sh` construye las imágenes de una en una porque compilar el backend y los dos frontends a la vez agotaría la memoria de la VM.
+
+### Verificación
+
+`scripts/verificar-despliegue.sh` ejecuta 17 comprobaciones y las 17 pasaron: los cinco contenedores activos, la redirección 80 → 443, las dos aplicaciones, la API rechazando peticiones sin token (401) y con credenciales malas (401), y un acceso real del administrador con respuesta 200 en `/api/auth/yo`, `/api/incidencias`, `/api/incidencias/mias` y `/api/usuarios`.
+
+### Consumo medido
+
+| Elemento | Valor |
+|---|---|
+| Backend | 288 MiB |
+| Postgres | 51 MiB |
+| Nginx (los tres) | ~10 MiB en total |
+| Sistema completo | 1,2 GiB usados de 3,9 GiB; swap sin usar |
+| Imágenes | backend 409 MB, cada frontend 74 MB |
+| Disco | 12 % usado de 61 GB |
+
+Todavía no incluye la réplica de Postgres ni Prometheus y Grafana; se sumarán en CLICKCLACK-60 y CLICKCLACK-13.
+
+### Incidencias durante el despliegue
+
+Insumo para la retrospectiva del Sprint 4:
+
+1. **El build del backend falló con `./mvnw: not found`.** Con `core.autocrlf=true`, Windows entrega los archivos con CRLF y el `` rompe el shebang. Se agregó `.gitattributes` con LF para scripts, Dockerfile y configuración de contenedores.
+2. **El proxy se reiniciaba en bucle con `unknown "ruta_cert" variable`.** El entrypoint de Nginx ignora los archivos `.envsh` sin permiso de ejecución. Se marcó el bit `+x` en git y el script de despliegue lo reafirma.
+3. **El script del administrador abortaba en su primera consulta.** `psql -c` no interpola variables; el SQL pasó a la entrada estándar.
+
+### Procedencia del build
+
+Lo desplegado es una integración local de las ramas de los PR #1 a #5, que todavía no están fusionadas en `main`. El despliegue definitivo de la v1 debe hacerse desde `main` una vez fusionados los PR, y etiquetarse `v1-apf2` según CONTRIBUTING.
+
+## 7. Cómo recrearla
 
 Preparación de la suscripción (una sola vez): registrar los proveedores `Microsoft.Compute`, `Microsoft.Network`, `Microsoft.Storage` y `Microsoft.DevTestLab`.
 
@@ -108,7 +187,7 @@ az role assignment create --assignee-object-id <principalId> --assignee-principa
 
 Después, copiar `infra/scripts/` a la VM, ejecutar `sh preparar-vm.sh` (Docker, swap y `fail2ban`) e instalar `apagar-vm.sh` y el cron como se indica en la sección 4.
 
-## 7. Límites conocidos
+## 8. Límites conocidos
 
 - **No es alta disponibilidad real.** La réplica de Postgres correrá en esta misma VM: demuestra el mecanismo de replicación (cap. 6.2), pero no protege ante la caída de la VM. Una alta disponibilidad real (cap. 13.2) pediría una segunda VM, que no cabe en el crédito de estudiante.
 - **El apagado nocturno es una decisión de costo.** El sistema no está disponible entre las 23:00 y el momento en que alguien la enciende.
