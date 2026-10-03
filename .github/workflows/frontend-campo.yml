@@ -1,0 +1,53 @@
+# CI de la aplicación de campo, PWA (CLICKCLACK-9): compila, prueba y audita las dependencias de producción.
+# Solo corre cuando cambia frontend-campo/ (ver Docs/tecnica/pipeline-ci.md).
+name: frontend-campo
+
+on:
+  pull_request:
+    paths:
+      - "frontend-campo/**"
+      - ".github/workflows/frontend-campo.yml"
+  push:
+    branches: [main]
+    paths:
+      - "frontend-campo/**"
+      - ".github/workflows/frontend-campo.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-campo-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  construccion:
+    name: Compilación, pruebas y auditoría (Node 22)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend-campo
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend-campo/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # El build también genera el service worker (vite-plugin-pwa).
+      - name: Compilar (tsc y build de producción)
+        run: npm run build
+
+      # Hoy el proyecto no define pruebas: el paso no falla, pero tampoco prueba nada.
+      - name: Pruebas
+        run: npm run test --if-present
+
+      - name: Auditar dependencias de producción (falla con severidad alta o crítica)
+        run: npm audit --omit=dev --audit-level=high

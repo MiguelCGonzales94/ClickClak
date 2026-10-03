@@ -1,0 +1,52 @@
+# CI del panel administrativo (CLICKCLACK-9): compila, prueba y audita las dependencias de producción.
+# Solo corre cuando cambia frontend-admin/ (ver Docs/tecnica/pipeline-ci.md).
+name: frontend-admin
+
+on:
+  pull_request:
+    paths:
+      - "frontend-admin/**"
+      - ".github/workflows/frontend-admin.yml"
+  push:
+    branches: [main]
+    paths:
+      - "frontend-admin/**"
+      - ".github/workflows/frontend-admin.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-admin-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  construccion:
+    name: Compilación, pruebas y auditoría (Node 22)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend-admin
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend-admin/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Compilar (tsc y build de producción)
+        run: npm run build
+
+      # Si el proyecto no define el script "test", el paso no falla.
+      - name: Pruebas
+        run: npm run test --if-present
+
+      - name: Auditar dependencias de producción (falla con severidad alta o crítica)
+        run: npm audit --omit=dev --audit-level=high
