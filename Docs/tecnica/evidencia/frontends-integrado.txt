@@ -1,0 +1,20 @@
+Frontends · simulacro local de la fusión (commit 6a1fb44, no subido) · 3-oct-2026
+Comandos por frontend: npm ci; npm run build; npx vitest run  (Node 22.21.0)
+
+=== frontend-admin
+--- tsc/build
+dist/index.html                   0.43 kB │ gzip:  0.30 kB
+dist/assets/index-Cq3IWQh7.css   22.74 kB │ gzip:  5.03 kB
+dist/assets/index-BQfjWV1v.js   216.11 kB │ gzip: 66.58 kB
+✓ built in 9.15s
+--- pruebas
+ Test Files  1 passed (1)
+      Tests  17 passed (17)
+=== frontend-campo
+--- tsc/build
+precache  5 entries (300.63 KiB)
+files generated
+  dist/sw.js
+  dist/workbox-9c191d2f.js
+--- pruebas
+No test files found, exiting with code 1
