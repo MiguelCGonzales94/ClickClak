@@ -40,6 +40,46 @@ export interface ErrorApi {
   error: string;
 }
 
+export type TipoEvento = "ENTRADA" | "INICIO_REFRIGERIO" | "FIN_REFRIGERIO" | "SALIDA";
+
+export type EstadoValidacion =
+  | "VALIDO"
+  | "OBSERVADO"
+  | "FUERA_DE_TOLERANCIA"
+  | "SOSPECHOSO"
+  | "SIN_ASIGNACION";
+
+export interface RespuestaDispositivo {
+  id: number;
+  nombreDispositivo: string | null;
+  activo: boolean;
+  registradoEn: string;
+}
+
+export interface SolicitudRegistrarMarcacion {
+  uuidCliente: string;
+  usuarioId: number;
+  dispositivoId: number;
+  tipoEvento: TipoEvento;
+  horaEvento: string;
+  latitud: number;
+  longitud: number;
+  precisionMetros: number | null;
+}
+
+export interface RespuestaMarcacion {
+  id: number;
+  uuidCliente: string;
+  tipoEvento: TipoEvento;
+  horaEvento: string;
+  horaSincronizacion: string;
+  latitud: number;
+  longitud: number;
+  precisionMetros: number | null;
+  distanciaMetros: number | null;
+  estadoValidacion: EstadoValidacion;
+}
+
 export interface SolicitudIniciarRegistroWebAuthn {
   usuarioId: number;
 }
