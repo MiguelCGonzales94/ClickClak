@@ -15,7 +15,8 @@ DESTINO="$HOME/credenciales-admin-inicial.txt"
 COMPOSE="sudo docker compose -f docker-compose.prod.yml --env-file .env"
 PSQL="$COMPOSE exec -T postgres psql -U clickclak -d clickclak -v ON_ERROR_STOP=1 -tA"
 
-EXISTE=$($PSQL -v correo="$CORREO" -c "SELECT count(*) FROM usuario WHERE correo = :'correo';")
+# El SQL va por entrada estándar y no con `-c`: psql solo interpola :'variable' en la primera forma.
+EXISTE=$(printf "SELECT count(*) FROM usuario WHERE correo = :'correo';\n" | $PSQL -v correo="$CORREO")
 if [ "$EXISTE" != "0" ]; then
     echo "Ya existe un usuario con el correo $CORREO: no se modifica nada."
     exit 0
