@@ -35,7 +35,7 @@ Activos a proteger, en orden de importancia: los datos de asistencia y ubicació
 | C13 | **Separación de funciones**: nadie revisa una incidencia que le afecta o que él mismo registró | Backend | `IncidenciaServiceTest.nadieRevisaUnaIncidenciaQueLeAfecta` |
 | C14 | **Validación de entradas**: tamaños acordes a cada columna de la base, rangos de coordenadas, formato de días de la semana, campos obligatorios | Backend | `SeguridadWebTest` (campos desmedidos, coordenadas, horario) |
 | C15 | **Errores uniformes sin detalles internos**: ni trazas, ni SQL, ni nombres de clases; los fallos inesperados salen como 500 genérico | Backend | `SeguridadWebTest.unFalloInternoSaleComo500GenericoSinDetalles` |
-| C16 | **CORS restringido por entorno**: en producción ningún origen externo | Backend | `SeguridadWebTest.corsAutorizaElOrigenConfigurado…` |
+| C16 | **CORS restringido por entorno**: en producción ningún origen externo; el backend reconoce el esquema, host y puerto públicos reenviados por el proxy | Backend y proxy | `SeguridadWebTest.corsAutorizaElOrigenConfigurado…`; verificación del login desde el origen real de 8443 |
 | C17 | **Hora del evento no futura** en las marcaciones (tolerancia de 5 minutos) | Backend | `SeguridadWebTest.laMarcacionRechazaUnEventoDelFuturo` |
 | C18 | **Auditoría**: historial de cada cambio de estado de una incidencia y bitácora con valores anteriores y nuevos | Backend | `IncidenciaControllerTest.flujoCompleto_dejaHistorialYAuditoriaDeCadaPaso` |
 | C19 | **Restricciones de integridad en la base**: dominios cerrados, fechas y horarios coherentes, asignaciones sin solapamiento | Base de datos | `RestriccionesBaseDatosTest` (8) |
@@ -66,7 +66,7 @@ Activos a proteger, en orden de importancia: los datos de asistencia y ubicació
 
 ### 4.2 Verificación del despliegue
 
-**Resultado probado (3-oct-2026).** `infra/scripts/verificar-despliegue.sh` ejecutó **52 comprobaciones** en la VM real y las 52 pasaron: 40 corresponden al despliegue y la seguridad web, y 12 a la replicación de PostgreSQL. Las 22 específicas de seguridad web comprueban, en los puertos 443 y 8443, las cabeceras de seguridad y que el servidor no revele su versión; además HSTS coherente con el certificado, ausencia de cabeceras duplicadas en la API, `/actuator` y archivos ocultos con 404, `TRACE` con 405, errores sin detalles internos y el límite de la recuperación de clave. La ejecución posterior a Let's Encrypt confirmó HSTS presente y la cadena pública válida. Véase [`evidencia/letsencrypt-hsts-2026-10-03.txt`](evidencia/letsencrypt-hsts-2026-10-03.txt).
+**Resultado probado (3-oct-2026).** `infra/scripts/verificar-despliegue.sh` ejecutó **52 comprobaciones** en la VM real y las 52 pasaron: 40 corresponden al despliegue y la seguridad web, y 12 a la replicación de PostgreSQL. Las 22 específicas de seguridad web comprueban, en los puertos 443 y 8443, las cabeceras de seguridad y que el servidor no revele su versión; además HSTS coherente con el certificado, el login administrativo desde su origen exacto sin rechazo CORS, ausencia de cabeceras duplicadas en la API, `/actuator` y archivos ocultos con 404, `TRACE` con 405, errores sin detalles internos y el límite de la recuperación de clave. La ejecución posterior a Let's Encrypt confirmó HSTS presente y la cadena pública válida. Véase [`evidencia/letsencrypt-hsts-2026-10-03.txt`](evidencia/letsencrypt-hsts-2026-10-03.txt).
 
 ### 4.3 La CSP en un navegador real
 

@@ -35,8 +35,12 @@ resultado "HTTPS 443: app de campo" "200" "$(codigo https://localhost/)"
 resultado "HTTPS 8443: panel administrativo" "200" "$(codigo https://localhost:8443/)"
 resultado "API sin token (443)" "401" "$(codigo https://localhost/api/incidencias/mias)"
 resultado "API sin token (8443)" "401" "$(codigo https://localhost:8443/api/incidencias/mias)"
-# Correo distinto en cada ejecución: tras 5 logins fallidos el backend bloquea esa cuenta.
-resultado "Login con credenciales malas" "401" "$(codigo -X POST https://localhost/api/auth/login -H 'Content-Type: application/json' -d "{\"correo\":\"verificacion.$(date +%s)@example.com\",\"password\":\"incorrecta123\"}")"
+# Prueba desde el origen real del panel. Conserva :8443 en Host para detectar la regresión en la
+# que Spring consideraba el POST como CORS externo y respondía 403 antes de autenticar.
+# Correo distinto en cada ejecución: tras 5 logins fallidos el backend bloquearía esa cuenta.
+resultado "Login en 8443 pasa CORS y rechaza credenciales malas" "401" "$(codigo -X POST https://localhost:8443/api/auth/login \
+    -H "Host: $DOMINIO:8443" -H "Origin: https://$DOMINIO:8443" -H 'Content-Type: application/json' \
+    -d "{\"correo\":\"verificacion.$(date +%s)@example.com\",\"password\":\"incorrecta123\"}")"
 
 echo "== acceso real con el administrador inicial"
 CREDENCIALES="$HOME/credenciales-admin-inicial.txt"

@@ -36,4 +36,11 @@ Seguridad web: HSTS presente y coherente con el certificado real
 Replicación de PostgreSQL: 12/12 comprobaciones correctas
 Resultado total: 52/52 comprobaciones correctas
 
+== corrección del login administrativo en 8443
+Fallo reproducido: POST desde Origin https://clickclak-utp.chilecentral.cloudapp.azure.com:8443 devolvía 403 (Invalid CORS request).
+Causa: el backend comparaba el HTTPS público con el HTTP interno y el proxy descartaba el puerto de Host.
+Corrección: encabezados reenviados con esquema, host y puerto públicos; Spring procesa los encabezados solo en producción.
+Regresión: el mismo POST con credenciales de prueba devuelve 401 de autenticación, no 403 de CORS.
+Verificación completa posterior: 52/52 comprobaciones correctas.
+
 Verificación completa: todo en orden.
