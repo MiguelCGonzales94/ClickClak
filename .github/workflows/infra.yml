@@ -24,10 +24,10 @@ concurrency:
 jobs:
   validacion:
     name: Sintaxis de scripts y de los compose
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Sintaxis de los scripts de shell
         run: |

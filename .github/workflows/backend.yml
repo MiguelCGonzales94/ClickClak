@@ -24,7 +24,7 @@ concurrency:
 jobs:
   pruebas:
     name: Pruebas del backend (Java 21 y Postgres con PostGIS)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     services:
       postgres:
@@ -45,9 +45,9 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "21"
@@ -78,7 +78,7 @@ jobs:
 
       - name: Conservar los informes de las pruebas
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: informes-surefire
           path: backend/target/surefire-reports

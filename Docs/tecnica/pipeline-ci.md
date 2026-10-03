@@ -4,13 +4,15 @@ Cap. IX 9.1 y 9.2 del informe · CLICKCLACK-9. Describe qué valida el CI de Cli
 
 Las etiquetas siguen la convención del proyecto: **Requerimiento**, **Supuesto**, **Recomendación**, **Decisión**.
 
-> **Estado de verificación.** Los flujos se escribieron y se **ejecutaron localmente comando por comando**, desde cero y contra una base de datos vacía. **Todavía no se han ejecutado en GitHub Actions**: el primer resultado real será el del pull request que los incorpore. Lo que dependa de Actions (caché, artefactos, resumen del paso) no está probado.
+> **Estado de verificación.** Los flujos se ejecutaron primero **en local, comando por comando**, desde cero y contra una base de datos vacía, y después **en GitHub Actions** sobre el pull request que los incorpora (sección 3). Las versiones actuales de las acciones (v5 y v6) y el sistema `ubuntu-24.04` se fijaron **después** de esa primera ejecución; su resultado es el estado de las comprobaciones del propio pull request.
 
 ## 1. Alcance y decisiones
 
 - **Decisión (2-sep-2026):** GitHub Actions como herramienta de CI.
 - **Requerimiento de `CONTRIBUTING.md`:** el CI se dispara solo sobre la carpeta que cambió. Hay un flujo por componente, con filtro de rutas.
-- **Decisión:** solo se usan acciones oficiales de GitHub (`actions/checkout`, `actions/setup-java`, `actions/setup-node` y `actions/upload-artifact`), sin acciones de terceros ni secretos. Los flujos solo piden permiso de lectura del contenido.
+- **Decisión:** solo se usan acciones oficiales de GitHub, sin acciones de terceros ni secretos: `actions/checkout@v5`, `actions/setup-java@v5`, `actions/setup-node@v5` y `actions/upload-artifact@v6`. Los flujos solo piden permiso de lectura del contenido.
+- **Decisión:** `upload-artifact` va en v6 y no en v5 porque la v5 todavía usa Node 20, que GitHub marcó como obsoleto; las demás acciones ya usan Node 24 desde la v5.
+- **Decisión:** los flujos corren en `ubuntu-24.04` y no en `ubuntu-latest`, porque GitHub anunció que esa etiqueta pasa a Ubuntu 26 el 19-oct-2026 y un cambio de sistema no debe llegar sin que nadie lo decida.
 - **Decisión:** el CI **no despliega**. Es integración continua, no entrega continua. El despliegue sigue siendo manual con `infra/scripts/desplegar.sh` (ver [despliegue-azure.md](despliegue-azure.md)).
 - **Decisión:** las ejecuciones repetidas sobre la misma rama se cancelan (`concurrency`), para no gastar minutos.
 
@@ -41,7 +43,20 @@ Se ejecutaron en local los mismos comandos de cada flujo, el 3-oct-2026, sobre *
 | `main` actual más los flujos (lo que verá el PR que los incorpore) | 104 pruebas, 0 fallos, build correcto | Build correcto, audit correcto, sin pruebas | Build correcto, audit correcto, sin pruebas | 1 compose válido, sin scripts |
 | Simulacro de la fusión de los 13 PR abiertos más los flujos | **178 pruebas, 0 fallos, 0 errores, en 45 s** | Build, 17 pruebas Vitest y audit correctos | Build y audit correctos, sin pruebas | 9 scripts con sintaxis correcta y 2 compose válidos |
 
-Otros datos medidos:
+### 3.1 Primera ejecución en GitHub Actions
+
+Con las acciones en v4 y `ubuntu-latest`, los cuatro flujos terminaron en verde sobre el pull request que los incorpora (3-oct-2026), que contiene `main` más los flujos:
+
+| Flujo | Resultado |
+|---|---|
+| `backend` | 104 pruebas, 0 fallos, con JDK 21; `BUILD SUCCESS` en 39,6 s. El resumen por clase se generó y los informes de Surefire se subieron como artefacto (105 KB). |
+| `frontend-admin` y `frontend-campo` | Todos los pasos correctos: instalación, build, pruebas (omitidas, `frontend-campo` no las define) y auditoría. |
+| `infra` | Sintaxis de scripts y validación de compose correctas. |
+
+GitHub emitió tres avisos: las acciones v4 apuntaban a Node 20, `actions/setup-java` v4 está obsoleta y la etiqueta `ubuntu-latest` cambiará de sistema el 19-oct-2026. Se atendieron con las decisiones de la sección 1.
+
+### 3.2 Otros datos medidos
+
 - Contra la base vacía, Flyway aplicó V1, V2 y la semilla de desarrollo, y las 178 pruebas pasaron: **no dependen de datos previos** en la base.
 - El paso de resumen del backend se ejecutó tal como está escrito en el YAML y produjo la tabla por clase.
 - Los cuatro archivos son YAML válido y solo referencian acciones oficiales.
@@ -61,7 +76,7 @@ Otros datos medidos:
 ## 5. Limitaciones conocidas
 
 - **Filtros de rutas y comprobaciones obligatorias.** Si se exigiera un flujo con filtro de rutas como comprobación obligatoria, un PR que no toque esa carpeta quedaría esperando un resultado que nunca llega. **Recomendación:** antes de exigir comprobaciones, agregar un flujo de resumen que corra siempre.
-- **Versiones fijadas por etiqueta** (`@v4`), no por huella (SHA): una etiqueta puede moverse. Es una decisión de simplicidad para este proyecto.
+- **Versiones fijadas por etiqueta** (`@v5`, `@v6`), no por huella (SHA): una etiqueta puede moverse. Es una decisión de simplicidad para este proyecto. Existen versiones más nuevas (v6 y v7 en varias acciones) que no se adoptaron.
 - **Minutos de Actions.** Si el repositorio pasa a privado, los minutos gratuitos dependen del plan. No se verificó el cupo.
 - **Base de datos de las pruebas.** Las pruebas usan un Postgres efímero del servicio, no una copia de producción.
 
@@ -80,7 +95,7 @@ find infra -type f \( -name '*.sh' -o -name '*.envsh' \) -exec sh -n {} \;
 
 ## 7. Pendientes
 
-1. **Ver el primer resultado real en GitHub Actions** y corregir lo que falle, que no se puede anticipar desde local.
+1. **Confirmar que los flujos siguen en verde tras fusionar los demás pull requests**, porque cada uno activa los flujos de la carpeta que toca.
 2. **Proteger `main`:** exigir pull request y revisión, y comprobaciones cuando exista el flujo de resumen. Es un ajuste en la configuración de GitHub que decide el equipo.
 3. **Actualizar `CONTRIBUTING.md`:** ya describe un CI que ahora existe, pero sigue diciendo que `main` está protegida y que se prefiere el squash, y ninguna de las dos cosas es cierta.
 4. **Lint, análisis de dependencias del backend y pruebas de `frontend-campo`.**
