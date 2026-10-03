@@ -36,6 +36,7 @@ public class HorarioController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('SUPERVISOR', 'RRHH_ADMIN')")
     public List<HorarioResponse> listar() {
         return horarioService.listarHorarios().stream().map(HorarioResponse::desde).toList();
     }

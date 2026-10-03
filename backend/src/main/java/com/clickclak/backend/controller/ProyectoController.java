@@ -36,6 +36,7 @@ public class ProyectoController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('SUPERVISOR', 'RRHH_ADMIN')")
     public List<ProyectoResponse> listar() {
         return proyectoService.listarProyectos().stream().map(ProyectoResponse::desde).toList();
     }

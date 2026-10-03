@@ -2,6 +2,7 @@ package com.clickclak.backend.config;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -30,10 +31,15 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ManejadorErroresAutenticacion manejadorErrores;
+    private final List<String> origenesPermitidos;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, ManejadorErroresAutenticacion manejadorErrores) {
+    public SecurityConfig(
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            ManejadorErroresAutenticacion manejadorErrores,
+            @Value("${clickclak.seguridad.cors.origenes:}") List<String> origenesPermitidos) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.manejadorErrores = manejadorErrores;
+        this.origenesPermitidos = origenesPermitidos;
     }
 
     @Bean
@@ -42,16 +48,15 @@ public class SecurityConfig {
     }
 
     /**
-     * Orígenes de los dos frontends en desarrollo local (Vite): 5174 es el de campo y
-     * 5173 el panel administrativo. Se aceptan localhost y 127.0.0.1 porque el navegador
-     * integrado de Codex suele abrir los servidores locales con la IP loopback.
+     * Orígenes que pueden llamar a la API desde otro origen, tomados de
+     * {@code clickclak.seguridad.cors.origenes} (lista separada por comas). En desarrollo son los
+     * servidores de Vite; en producción la lista va vacía porque el proxy sirve los frontends y la
+     * API bajo el mismo origen, así que ningún origen externo queda autorizado.
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuracion = new CorsConfiguration();
-        configuracion.setAllowedOrigins(List.of(
-                "http://localhost:5173", "http://localhost:5174",
-                "http://127.0.0.1:5173", "http://127.0.0.1:5174"));
+        configuracion.setAllowedOrigins(origenesPermitidos);
         configuracion.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuracion.setAllowedHeaders(List.of("Authorization", "Content-Type"));
 

@@ -37,6 +37,7 @@ public class UbicacionController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('SUPERVISOR', 'RRHH_ADMIN')")
     public List<UbicacionResponse> listar(@RequestParam(required = false) Long proyectoId) {
         return ubicacionService.listarUbicaciones(proyectoId).stream().map(UbicacionResponse::desde).toList();
     }

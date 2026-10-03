@@ -8,3 +8,7 @@ clickclak:
   seguridad:
     jwt:
       secret: ${JWT_SECRET}
+    cors:
+      # Vacío por defecto: el proxy sirve frontends y API bajo el mismo origen, así que no se
+      # autoriza ningún origen externo. Solo se rellena si algún día hay un cliente en otro dominio.
+      origenes: ${CORS_ORIGENES:}
