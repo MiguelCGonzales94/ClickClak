@@ -1,0 +1,49 @@
+# CI de la infraestructura (CLICKCLACK-9): valida la sintaxis de los scripts y de los compose.
+# No despliega nada. Solo corre cuando cambia infra/ (ver Docs/tecnica/pipeline-ci.md).
+name: infra
+
+on:
+  pull_request:
+    paths:
+      - "infra/**"
+      - ".github/workflows/infra.yml"
+  push:
+    branches: [main]
+    paths:
+      - "infra/**"
+      - ".github/workflows/infra.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infra-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validacion:
+    name: Sintaxis de scripts y de los compose
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sintaxis de los scripts de shell
+        run: |
+          encontrados=$(find infra -type f \( -name '*.sh' -o -name '*.envsh' \) | sort)
+          if [ -z "$encontrados" ]; then echo "No hay scripts de shell en infra/."; exit 0; fi
+          for f in $encontrados; do
+            sh -n "$f" && echo "sintaxis correcta: $f"
+          done
+
+      # Los compose exigen variables que viven en infra/.env, que no está en el repositorio:
+      # se les da un valor de prueba solo para validar la estructura del archivo.
+      - name: Validar los compose
+        run: |
+          for f in infra/docker-compose*.yml; do
+            for v in $(grep -ohE '\$\{[A-Z_]+' "$f" | tr -d '${' | sort -u); do
+              export "$v=valor-de-prueba"
+            done
+            docker compose -f "$f" config -q && echo "compose válido: $f"
+          done
