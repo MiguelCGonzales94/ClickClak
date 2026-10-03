@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definiciones_to-be-marcacion" targetNamespace="http://clickclak.local/bpm">
+  <collaboration id="Colaboracion_to-be-marcacion">
+    <participant id="Pool_to-be-marcacion" name="TO-BE: registro de jornada" processRef="Proceso_to-be-marcacion" />
+  </collaboration>
+  <process id="Proceso_to-be-marcacion" isExecutable="false">
+    <laneSet>
+      <lane id="Lane_col" name="Colaborador">
+        <flowNodeRef>m_ini</flowNodeRef>
+        <flowNodeRef>m_ses</flowNodeRef>
+        <flowNodeRef>m_sol</flowNodeRef>
+        <flowNodeRef>m_fin</flowNodeRef>
+      </lane>
+      <lane id="Lane_app" name="Aplicación de campo (PWA)">
+        <flowNodeRef>m_cap</flowNodeRef>
+        <flowNodeRef>m_con</flowNodeRef>
+        <flowNodeRef>m_gua</flowNodeRef>
+        <flowNodeRef>m_rec</flowNodeRef>
+        <flowNodeRef>m_env</flowNodeRef>
+        <flowNodeRef>m_res</flowNodeRef>
+      </lane>
+      <lane id="Lane_srv" name="Servidor (API)">
+        <flowNodeRef>m_val</flowNodeRef>
+      </lane>
+    </laneSet>
+    <startEvent id="m_ini" name="Inicio o fin de jornada o de refrigerio"><outgoing>Flujo_0</outgoing></startEvent>
+    <userTask id="m_ses" name="Iniciar sesión con la biometría del dispositivo"><incoming>Flujo_0</incoming><outgoing>Flujo_1</outgoing></userTask>
+    <userTask id="m_sol" name="Solicitar la marcación (ingreso, refrigerio o salida)"><incoming>Flujo_1</incoming><outgoing>Flujo_2</outgoing></userTask>
+    <serviceTask id="m_cap" name="Capturar ubicación y hora del evento"><incoming>Flujo_2</incoming><outgoing>Flujo_3</outgoing></serviceTask>
+    <exclusiveGateway id="m_con" name="¿Hay conexión?"><incoming>Flujo_3</incoming><outgoing>Flujo_4</outgoing><outgoing>Flujo_5</outgoing></exclusiveGateway>
+    <serviceTask id="m_gua" name="Guardar la marcación en la cola local"><incoming>Flujo_5</incoming><outgoing>Flujo_6</outgoing></serviceTask>
+    <intermediateCatchEvent id="m_rec" name="Conexión recuperada"><incoming>Flujo_6</incoming><outgoing>Flujo_7</outgoing><messageEventDefinition /></intermediateCatchEvent>
+    <serviceTask id="m_env" name="Enviar la marcación al servidor"><incoming>Flujo_4</incoming><incoming>Flujo_7</incoming><outgoing>Flujo_8</outgoing></serviceTask>
+    <callActivity id="m_val" name="Validar y registrar la marcación"><incoming>Flujo_8</incoming><outgoing>Flujo_9</outgoing></callActivity>
+    <serviceTask id="m_res" name="Mostrar el resultado de la validación"><incoming>Flujo_9</incoming><outgoing>Flujo_10</outgoing></serviceTask>
+    <endEvent id="m_fin" name="Marcación confirmada"><incoming>Flujo_10</incoming></endEvent>
+    <sequenceFlow id="Flujo_0" sourceRef="m_ini" targetRef="m_ses" />
+    <sequenceFlow id="Flujo_1" sourceRef="m_ses" targetRef="m_sol" />
+    <sequenceFlow id="Flujo_2" sourceRef="m_sol" targetRef="m_cap" />
+    <sequenceFlow id="Flujo_3" sourceRef="m_cap" targetRef="m_con" />
+    <sequenceFlow id="Flujo_4" sourceRef="m_con" targetRef="m_env" name="Sí" />
+    <sequenceFlow id="Flujo_5" sourceRef="m_con" targetRef="m_gua" name="No" />
+    <sequenceFlow id="Flujo_6" sourceRef="m_gua" targetRef="m_rec" />
+    <sequenceFlow id="Flujo_7" sourceRef="m_rec" targetRef="m_env" />
+    <sequenceFlow id="Flujo_8" sourceRef="m_env" targetRef="m_val" />
+    <sequenceFlow id="Flujo_9" sourceRef="m_val" targetRef="m_res" />
+    <sequenceFlow id="Flujo_10" sourceRef="m_res" targetRef="m_fin" />
+    <textAnnotation id="mn1"><text>La sesión se abre con WebAuthn (biometría delegada al sistema operativo). Al marcar, la app no vuelve a pedir la biometría: usa la sesión y el dispositivo autorizado.</text></textAnnotation>
+    <association id="Asoc_mn1" sourceRef="m_ses" targetRef="mn1" />
+    <textAnnotation id="mn2"><text>Si el envío falla por red o por error del servidor (408, 429 o 5xx), la app también encola la marcación y la reintenta. No se dibuja para no saturar el diagrama.</text></textAnnotation>
+    <association id="Asoc_mn2" sourceRef="m_gua" targetRef="mn2" />
+    <textAnnotation id="mn3"><text>Subproceso detallado en el diagrama de validación en el servidor.</text></textAnnotation>
+    <association id="Asoc_mn3" sourceRef="m_val" targetRef="mn3" />
+  </process>
+  <bpmndi:BPMNDiagram id="Diagrama_1">
+    <bpmndi:BPMNPlane id="Plano_1" bpmnElement="Colaboracion_to-be-marcacion">
+      <bpmndi:BPMNShape id="Forma_Pool" bpmnElement="Pool_to-be-marcacion" isHorizontal="true"><dc:Bounds x="30" y="174" width="1910" height="500" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_Lane_col" bpmnElement="Lane_col" isHorizontal="true"><dc:Bounds x="60" y="174" width="1880" height="130" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_Lane_app" bpmnElement="Lane_app" isHorizontal="true"><dc:Bounds x="60" y="304" width="1880" height="240" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_Lane_srv" bpmnElement="Lane_srv" isHorizontal="true"><dc:Bounds x="60" y="544" width="1880" height="130" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_m_ini" bpmnElement="m_ini"><dc:Bounds x="192" y="221" width="36" height="36" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_m_ses" bpmnElement="m_ses"><dc:Bounds x="330" y="197" width="120" height="84" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_m_sol" bpmnElement="m_sol"><dc:Bounds x="510" y="197" width="120" height="84" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_m_cap" bpmnElement="m_cap"><dc:Bounds x="690" y="322" width="120" height="84" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_m_con" bpmnElement="m_con" isMarkerVisible="true"><dc:Bounds x="905" y="339" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="808" y="390" width="96" height="46" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_m_gua" bpmnElement="m_gua"><dc:Bounds x="870" y="442" width="120" height="84" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_m_rec" bpmnElement="m_rec"><dc:Bounds x="1092" y="466" width="36" height="36" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_m_env" bpmnElement="m_env"><dc:Bounds x="1230" y="322" width="120" height="84" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_m_val" bpmnElement="m_val"><dc:Bounds x="1410" y="567" width="120" height="84" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_m_res" bpmnElement="m_res"><dc:Bounds x="1590" y="322" width="120" height="84" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_m_fin" bpmnElement="m_fin"><dc:Bounds x="1812" y="221" width="36" height="36" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Borde_0" bpmnElement="Flujo_0"><di:waypoint x="228" y="239" /><di:waypoint x="330" y="239" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_1" bpmnElement="Flujo_1"><di:waypoint x="450" y="239" /><di:waypoint x="510" y="239" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_2" bpmnElement="Flujo_2"><di:waypoint x="570" y="281" /><di:waypoint x="570" y="364" /><di:waypoint x="690" y="364" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_3" bpmnElement="Flujo_3"><di:waypoint x="810" y="364" /><di:waypoint x="905" y="364" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_4" bpmnElement="Flujo_4"><di:waypoint x="955" y="364" /><di:waypoint x="1230" y="364" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_5" bpmnElement="Flujo_5"><di:waypoint x="930" y="389" /><di:waypoint x="930" y="442" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_6" bpmnElement="Flujo_6"><di:waypoint x="990" y="484" /><di:waypoint x="1092" y="484" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_7" bpmnElement="Flujo_7"><di:waypoint x="1110" y="466" /><di:waypoint x="1110" y="364" /><di:waypoint x="1230" y="364" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_8" bpmnElement="Flujo_8"><di:waypoint x="1290" y="406" /><di:waypoint x="1290" y="609" /><di:waypoint x="1410" y="609" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_9" bpmnElement="Flujo_9"><di:waypoint x="1470" y="567" /><di:waypoint x="1470" y="364" /><di:waypoint x="1590" y="364" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_10" bpmnElement="Flujo_10"><di:waypoint x="1650" y="322" /><di:waypoint x="1650" y="239" /><di:waypoint x="1812" y="239" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Forma_mn1" bpmnElement="mn1"><dc:Bounds x="265" y="60" width="250" height="89" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Borde_Asoc_mn1" bpmnElement="Asoc_mn1"><di:waypoint x="390" y="149" /><di:waypoint x="390" y="197" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Forma_mn2" bpmnElement="mn2"><dc:Bounds x="692" y="699" width="260" height="89" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Borde_Asoc_mn2" bpmnElement="Asoc_mn2"><di:waypoint x="822" y="699" /><di:waypoint x="930" y="526" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Forma_mn3" bpmnElement="mn3"><dc:Bounds x="1370" y="699" width="200" height="59" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Borde_Asoc_mn3" bpmnElement="Asoc_mn3"><di:waypoint x="1470" y="699" /><di:waypoint x="1470" y="651" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

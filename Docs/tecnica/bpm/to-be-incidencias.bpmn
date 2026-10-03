@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definiciones_to-be-incidencias" targetNamespace="http://clickclak.local/bpm">
+  <collaboration id="Colaboracion_to-be-incidencias">
+    <participant id="Pool_to-be-incidencias" name="TO-BE: gestión de incidencias" processRef="Proceso_to-be-incidencias" />
+  </collaboration>
+  <process id="Proceso_to-be-incidencias" isExecutable="false">
+    <laneSet>
+      <lane id="Lane_col" name="Colaborador">
+        <flowNodeRef>i_ini</flowNodeRef>
+        <flowNodeRef>i_reg</flowNodeRef>
+      </lane>
+      <lane id="Lane_srv" name="Servidor (API)">
+        <flowNodeRef>i_ia</flowNodeRef>
+        <flowNodeRef>i_g1</flowNodeRef>
+        <flowNodeRef>i_er</flowNodeRef>
+        <flowNodeRef>i_alt</flowNodeRef>
+        <flowNodeRef>i_aut</flowNodeRef>
+      </lane>
+      <lane id="Lane_rev" name="Supervisor o RRHH">
+        <flowNodeRef>i_tom</flowNodeRef>
+        <flowNodeRef>i_g2</flowNodeRef>
+        <flowNodeRef>i_apr</flowNodeRef>
+        <flowNodeRef>i_rec</flowNodeRef>
+        <flowNodeRef>i_cer</flowNodeRef>
+        <flowNodeRef>i_fin</flowNodeRef>
+      </lane>
+    </laneSet>
+    <startEvent id="i_ini" name="Hay una incidencia por registrar"><outgoing>Flujo_0</outgoing></startEvent>
+    <userTask id="i_reg" name="Registrar la incidencia (tipo, fecha y descripción)"><incoming>Flujo_0</incoming><outgoing>Flujo_1</outgoing></userTask>
+    <startEvent id="i_ia" name="Tardanza detectada al marcar"><outgoing>Flujo_2</outgoing><messageEventDefinition /></startEvent>
+    <exclusiveGateway id="i_g1" name="¿Cumple las reglas de alta?"><incoming>Flujo_1</incoming><outgoing>Flujo_3</outgoing><outgoing>Flujo_4</outgoing></exclusiveGateway>
+    <endEvent id="i_er" name="Alta rechazada (400 o 409)"><incoming>Flujo_4</incoming><errorEventDefinition /></endEvent>
+    <serviceTask id="i_alt" name="Registrar la incidencia en estado REGISTRADA"><incoming>Flujo_3</incoming><outgoing>Flujo_5</outgoing></serviceTask>
+    <serviceTask id="i_aut" name="Generar la incidencia de tardanza"><incoming>Flujo_2</incoming><outgoing>Flujo_6</outgoing></serviceTask>
+    <userTask id="i_tom" name="Tomar la incidencia para revisión"><incoming>Flujo_5</incoming><incoming>Flujo_6</incoming><outgoing>Flujo_7</outgoing></userTask>
+    <exclusiveGateway id="i_g2" name="¿La incidencia procede?"><incoming>Flujo_7</incoming><outgoing>Flujo_8</outgoing><outgoing>Flujo_9</outgoing></exclusiveGateway>
+    <userTask id="i_apr" name="Aprobar (comentario opcional)"><incoming>Flujo_8</incoming><outgoing>Flujo_10</outgoing></userTask>
+    <userTask id="i_rec" name="Rechazar (motivo obligatorio)"><incoming>Flujo_9</incoming><outgoing>Flujo_11</outgoing></userTask>
+    <userTask id="i_cer" name="Cerrar la incidencia"><incoming>Flujo_10</incoming><incoming>Flujo_11</incoming><outgoing>Flujo_12</outgoing></userTask>
+    <endEvent id="i_fin" name="Incidencia cerrada"><incoming>Flujo_12</incoming></endEvent>
+    <sequenceFlow id="Flujo_0" sourceRef="i_ini" targetRef="i_reg" />
+    <sequenceFlow id="Flujo_1" sourceRef="i_reg" targetRef="i_g1" />
+    <sequenceFlow id="Flujo_2" sourceRef="i_ia" targetRef="i_aut" />
+    <sequenceFlow id="Flujo_3" sourceRef="i_g1" targetRef="i_alt" name="Sí" />
+    <sequenceFlow id="Flujo_4" sourceRef="i_g1" targetRef="i_er" name="No" />
+    <sequenceFlow id="Flujo_5" sourceRef="i_alt" targetRef="i_tom" />
+    <sequenceFlow id="Flujo_6" sourceRef="i_aut" targetRef="i_tom" />
+    <sequenceFlow id="Flujo_7" sourceRef="i_tom" targetRef="i_g2" />
+    <sequenceFlow id="Flujo_8" sourceRef="i_g2" targetRef="i_apr" name="Sí" />
+    <sequenceFlow id="Flujo_9" sourceRef="i_g2" targetRef="i_rec" name="No" />
+    <sequenceFlow id="Flujo_10" sourceRef="i_apr" targetRef="i_cer" />
+    <sequenceFlow id="Flujo_11" sourceRef="i_rec" targetRef="i_cer" />
+    <sequenceFlow id="Flujo_12" sourceRef="i_cer" targetRef="i_fin" />
+    <textAnnotation id="in1"><text>Pendiente (CLICKCLACK-56, Sprint 5): adjuntar el sustento documental. Hoy solo se registra la descripción.</text></textAnnotation>
+    <association id="Asoc_in1" sourceRef="i_reg" targetRef="in1" />
+    <textAnnotation id="in2"><text>Reglas de alta: la fecha no puede ser futura salvo en permisos; la marcación indicada debe ser del colaborador; no puede haber otra igual abierta (REGISTRADA, EN_REVISION o APROBADA).</text></textAnnotation>
+    <association id="Asoc_in2" sourceRef="i_g1" targetRef="in2" />
+    <textAnnotation id="in3"><text>El personal de revisión también puede registrar la incidencia a nombre del colaborador.</text></textAnnotation>
+    <association id="Asoc_in3" sourceRef="i_reg" targetRef="in3" />
+    <textAnnotation id="in4"><text>Separación de funciones: no puede tomar, aprobar ni rechazar quien es el afectado o registró la incidencia. El cierre no tiene esta restricción.</text></textAnnotation>
+    <association id="Asoc_in4" sourceRef="i_tom" targetRef="in4" />
+    <textAnnotation id="in5"><text>Cada cambio de estado deja una fila de historial y otra de auditoría con el actor y los valores anteriores y nuevos.</text></textAnnotation>
+    <association id="Asoc_in5" sourceRef="i_rec" targetRef="in5" />
+  </process>
+  <bpmndi:BPMNDiagram id="Diagrama_1">
+    <bpmndi:BPMNPlane id="Plano_1" bpmnElement="Colaboracion_to-be-incidencias">
+      <bpmndi:BPMNShape id="Forma_Pool" bpmnElement="Pool_to-be-incidencias" isHorizontal="true"><dc:Bounds x="30" y="174" width="1982.0" height="610" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_Lane_col" bpmnElement="Lane_col" isHorizontal="true"><dc:Bounds x="60" y="174" width="1952.0" height="130" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_Lane_srv" bpmnElement="Lane_srv" isHorizontal="true"><dc:Bounds x="60" y="304" width="1952.0" height="240" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_Lane_rev" bpmnElement="Lane_rev" isHorizontal="true"><dc:Bounds x="60" y="544" width="1952.0" height="240" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_i_ini" bpmnElement="i_ini"><dc:Bounds x="192" y="221" width="36" height="36" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_i_reg" bpmnElement="i_reg"><dc:Bounds x="330" y="197" width="120" height="84" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_i_ia" bpmnElement="i_ia"><dc:Bounds x="732" y="466" width="36" height="36" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_i_g1" bpmnElement="i_g1" isMarkerVisible="true"><dc:Bounds x="545" y="339" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="448" y="390" width="96" height="46" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_i_er" bpmnElement="i_er"><dc:Bounds x="552" y="466" width="36" height="36" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_i_alt" bpmnElement="i_alt"><dc:Bounds x="690" y="322" width="120" height="84" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_i_aut" bpmnElement="i_aut"><dc:Bounds x="870" y="442" width="120" height="84" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_i_tom" bpmnElement="i_tom"><dc:Bounds x="1050" y="622" width="120" height="84" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_i_g2" bpmnElement="i_g2" isMarkerVisible="true"><dc:Bounds x="1337" y="639" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="1240" y="592" width="96" height="46" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_i_apr" bpmnElement="i_apr"><dc:Bounds x="1482" y="562" width="120" height="84" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_i_rec" bpmnElement="i_rec"><dc:Bounds x="1482" y="682" width="120" height="84" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_i_cer" bpmnElement="i_cer"><dc:Bounds x="1662" y="622" width="120" height="84" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Forma_i_fin" bpmnElement="i_fin"><dc:Bounds x="1884" y="646" width="36" height="36" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Borde_0" bpmnElement="Flujo_0"><di:waypoint x="228" y="239" /><di:waypoint x="330" y="239" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_1" bpmnElement="Flujo_1"><di:waypoint x="390" y="281" /><di:waypoint x="390" y="364" /><di:waypoint x="545" y="364" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_2" bpmnElement="Flujo_2"><di:waypoint x="768" y="484" /><di:waypoint x="870" y="484" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_3" bpmnElement="Flujo_3"><di:waypoint x="595" y="364" /><di:waypoint x="690" y="364" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_4" bpmnElement="Flujo_4"><di:waypoint x="570" y="389" /><di:waypoint x="570" y="466" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_5" bpmnElement="Flujo_5"><di:waypoint x="810" y="364" /><di:waypoint x="1110" y="364" /><di:waypoint x="1110" y="622" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_6" bpmnElement="Flujo_6"><di:waypoint x="990" y="484" /><di:waypoint x="1110" y="484" /><di:waypoint x="1110" y="622" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_7" bpmnElement="Flujo_7"><di:waypoint x="1170" y="664" /><di:waypoint x="1337" y="664" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_8" bpmnElement="Flujo_8"><di:waypoint x="1362" y="639" /><di:waypoint x="1362" y="604" /><di:waypoint x="1482" y="604" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_9" bpmnElement="Flujo_9"><di:waypoint x="1362" y="689" /><di:waypoint x="1362" y="724" /><di:waypoint x="1482" y="724" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_10" bpmnElement="Flujo_10"><di:waypoint x="1542" y="646" /><di:waypoint x="1542" y="664" /><di:waypoint x="1662" y="664" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_11" bpmnElement="Flujo_11"><di:waypoint x="1542" y="682" /><di:waypoint x="1542" y="664" /><di:waypoint x="1662" y="664" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Borde_12" bpmnElement="Flujo_12"><di:waypoint x="1782" y="664" /><di:waypoint x="1884" y="664" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Forma_in1" bpmnElement="in1"><dc:Bounds x="131" y="75" width="230" height="74" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Borde_Asoc_in1" bpmnElement="Asoc_in1"><di:waypoint x="246" y="149" /><di:waypoint x="390" y="197" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Forma_in2" bpmnElement="in2"><dc:Bounds x="803" y="60" width="290" height="89" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Borde_Asoc_in2" bpmnElement="Asoc_in2"><di:waypoint x="948" y="149" /><di:waypoint x="570" y="339" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Forma_in3" bpmnElement="in3"><dc:Bounds x="514" y="90" width="220" height="59" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Borde_Asoc_in3" bpmnElement="Asoc_in3"><di:waypoint x="624" y="149" /><di:waypoint x="390" y="197" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Forma_in4" bpmnElement="in4"><dc:Bounds x="921" y="809" width="270" height="74" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Borde_Asoc_in4" bpmnElement="Asoc_in4"><di:waypoint x="1056" y="809" /><di:waypoint x="1110" y="706" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Forma_in5" bpmnElement="in5"><dc:Bounds x="1453" y="809" width="250" height="74" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Borde_Asoc_in5" bpmnElement="Asoc_in5"><di:waypoint x="1578" y="809" /><di:waypoint x="1542" y="766" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>
