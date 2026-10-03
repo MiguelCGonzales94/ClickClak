@@ -4,7 +4,7 @@ Ejecución local del [plan de validación](plan-de-pruebas.md) el 3-oct-2026 (CL
 
 Las etiquetas siguen la convención del proyecto: **Requerimiento**, **Supuesto**, **Recomendación**, **Decisión**.
 
-> **Qué se probó y qué no.** Todo se ejecutó **en local** sobre un simulacro de la fusión en `main` de los 13 PR abiertos (commit `6a1fb44` de un worktree local, no subido). Los casos que exigen un autenticador, un service worker o la VM de Azure **no se ejecutaron** y están en la sección 5. No se hicieron pruebas de carga (decisión del 3-oct).
+> **Qué se probó y qué no.** El primer corte se ejecutó en local sobre un simulacro de la fusión de los 13 PR abiertos (commit `6a1fb44` de un worktree local, no subido). Después de fusionar, la suite completa del backend se repitió sobre `main` (`8ae83d1`) con JDK 21 y el despliegue de Azure se verificó con 52/52 comprobaciones correctas. WebAuthn real y la cola sin conexión del service worker **no se probaron** y siguen en la sección 5. No se hicieron pruebas de carga (decisión del 3-oct).
 
 ## 1. Resumen
 
@@ -20,7 +20,7 @@ Las etiquetas siguen la convención del proyecto: **Requerimiento**, **Supuesto*
 
 ## 2. Pruebas automatizadas del backend
 
-178 pruebas en 28 clases, con el contexto completo de Spring y Postgres 16.4 con PostGIS 3.4 reales (base de desarrollo). El detalle por clase está en [evidencia/backend-pruebas-integrado.txt](evidencia/backend-pruebas-integrado.txt).
+178 pruebas en 28 clases, con el contexto completo de Spring y Postgres 16.4 con PostGIS 3.4 reales (base de desarrollo). **Resultado probado nuevamente el 3-oct-2026 sobre `main`:** JDK 21.0.8, 178 pruebas, 0 fallos, 0 errores, 0 omitidas y `BUILD SUCCESS`. El detalle por clase está en [evidencia/backend-pruebas-integrado.txt](evidencia/backend-pruebas-integrado.txt).
 
 | Caso | Requerimiento | Pruebas | Resultado |
 |---|---|---|---|
@@ -69,15 +69,21 @@ Script [prueba_e2e_marcacion.py](evidencia/prueba_e2e_marcacion.py), ejecutado c
 
 Los casos CP-M01 a CP-M03 se ejecutaron antes de este plan y **no se repitieron sobre el estado integrado**. Los resultados quedan registrados como texto; **no se guardaron capturas de pantalla** en el repositorio.
 
+### 4.1 Verificación del despliegue en Azure
+
+| Caso | Resultado | Cuándo y dónde |
+|---|---|---|
+| CP-X03 `verificar-despliegue.sh` | **Correcto: 52/52 comprobaciones** (40 de despliegue y seguridad web; 12 de replicación) | 3-oct-2026, VM `vm-clickclak`, commit `8ae83d1` de `main` |
+
+La salida completa se conserva en [`evidencia/despliegue-main-2026-10-03.txt`](evidencia/despliegue-main-2026-10-03.txt). **No prueba** WebAuthn real ni la cola sin conexión del service worker; ambos casos siguen pendientes en Android.
+
 ## 5. Casos no ejecutados
 
 | Caso | Requerimiento | Motivo | Qué hace falta |
 |---|---|---|---|
 | CP-X01 Inicio de sesión con WebAuthn y biometría real | OE2 | Exige un autenticador | Probar en un dispositivo Android |
 | CP-X02 Cola sin conexión y sincronización diferida en el cliente | OE4 | Exige service worker, geolocalización y WebAuthn; el navegador integrado no registra service workers | Probar en Chrome Android |
-| CP-X03 `verificar-despliegue.sh` (52 comprobaciones) y CSP en el sitio desplegado | OE7, Seguridad | Exige la VM encendida y el código de `main` desplegado | Ejecutar tras fusionar y desplegar |
 | Pruebas de carga y rendimiento | No funcional | Fuera del alcance decidido el 3-oct. El criterio de aceptación de CLICKCLACK-64 las menciona | Mover a CLICKCLACK-10 y 32, o ejecutarlas antes del APF2 |
-| Backend con JDK 21 | Todos | Las pruebas corrieron con JDK 23.0.1 sobre un proyecto con `java.version` 21 | Repetir con JDK 21, que es el de la imagen de producción |
 
 ## 6. Defectos y hallazgos
 

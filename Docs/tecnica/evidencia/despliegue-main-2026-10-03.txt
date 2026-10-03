@@ -1,0 +1,66 @@
+Evidencia de despliegue de ClickClak desde main
+Fecha: 3-oct-2026
+VM: vm-clickclak (Azure, Chile Central)
+Commit desplegado: 8ae83d17bcd4cc1af604865558e87ceff5e11833
+Comando: sh scripts/verificar-despliegue.sh
+Resultado: 52/52 comprobaciones correctas
+
+== contenedores
+OK     contenedor postgres                                        activo
+OK     contenedor postgres-replica                                activo
+OK     contenedor backend                                         activo
+OK     contenedor frontend-admin                                  activo
+OK     contenedor frontend-campo                                  activo
+OK     contenedor proxy                                           activo
+== proxy (HTTPS con certificado temporal: curl -k)
+OK     HTTP 80 redirige a HTTPS                                   301
+OK     HTTPS 443: app de campo                                    200
+OK     HTTPS 8443: panel administrativo                           200
+OK     API sin token (443)                                        401
+OK     API sin token (8443)                                       401
+OK     Login con credenciales malas                               401
+== acceso real con el administrador inicial
+OK     login del administrador                                    correcto
+OK     rol devuelto                                               RRHH_ADMIN
+OK     GET /api/auth/yo con token                                 200
+OK     GET /api/incidencias con token                             200
+OK     GET /api/incidencias/mias con token                        200
+OK     GET /api/usuarios con token                                200
+== seguridad web (cabeceras, superficie expuesta y límites)
+OK     [443] X-Content-Type-Options: nosniff                      presente
+OK     [443] X-Frame-Options: DENY                                presente
+OK     [443] Content-Security-Policy con default-src 'self'       presente
+OK     [443] Referrer-Policy                                      presente
+OK     [443] Permissions-Policy limita sensores                   presente
+OK     [443] el servidor no revela su versión                    presente
+OK     [8443] X-Content-Type-Options: nosniff                     presente
+OK     [8443] X-Frame-Options: DENY                               presente
+OK     [8443] Content-Security-Policy con default-src 'self'      presente
+OK     [8443] Referrer-Policy                                     presente
+OK     [8443] Permissions-Policy limita sensores                  presente
+OK     [8443] el servidor no revela su versión                   presente
+OK     HSTS acorde al certificado (esperado: ausente)             ausente
+OK     API sin cabeceras duplicadas (nosniff una sola vez)        1
+OK     Actuator health no se enruta                               404
+OK     Actuator prometheus no se enruta                           404
+OK     Archivo oculto /.env no se sirve                           404
+OK     Carpeta oculta /.git/config no se sirve                    404
+OK     Método TRACE rechazado                                    405
+OK     Error de la API sin detalles internos                      1
+OK     Recuperación de clave: la primera petición pasa          200
+OK     Recuperación de clave: la ráfaga recibe 429              1
+== replicación de Postgres (detalle en scripts/verificar-replicacion.sh)
+OK     la primaria no está en modo réplica                        f
+OK     la réplica está conectada y en streaming                   streaming
+OK     se conecta con el rol replicador                           replicador
+OK     la ranura replica_slot está activa                         t
+OK     retraso de la réplica (0 bytes) dentro de 1 MiB             correcto
+OK     la réplica está en modo recuperación                       t
+OK     la réplica tiene PostGIS                                   postgis
+OK     la réplica rechaza escrituras                              rechazada
+OK     el rol replicador no puede entrar a la base de la aplicación denegado
+OK     una contraseña incorrecta no puede replicar                rechazada
+OK     una escritura en la primaria aparece en la réplica         marca-1791017106-144380
+OK     las dos bases tienen los mismos roles de la aplicación      3
+
+Verificación completa: todo en orden.

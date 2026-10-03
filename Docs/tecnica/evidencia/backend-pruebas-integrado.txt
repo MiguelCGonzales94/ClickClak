@@ -1,5 +1,5 @@
-Pruebas automatizadas del backend · simulacro local de la fusión de los 13 PR (commit 6a1fb44, no subido) · 3-oct-2026
-Comando: ./mvnw -B test  (backend/, perfil dev, Postgres 16.4 + PostGIS 3.4 en Docker, puerto 5434, JDK 23.0.1)
+Pruebas automatizadas del backend · main (commit 8ae83d1) · 3-oct-2026
+Comando: .\mvnw.cmd test  (backend/, perfil dev, Postgres 16.4 + PostGIS 3.4 en Docker, puerto 5434, JDK 21.0.8)
 Fuente: target/surefire-reports/TEST-*.xml (una línea por clase)
 
 Clase                                            Pruebas  Fallos Errores  Omitidas

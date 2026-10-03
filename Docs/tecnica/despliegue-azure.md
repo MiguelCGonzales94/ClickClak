@@ -135,20 +135,21 @@ sh scripts/verificar-despliegue.sh   # prueba de humo
 
 ### Verificación
 
-`scripts/verificar-despliegue.sh` ejecuta 17 comprobaciones y las 17 pasaron: los cinco contenedores activos, la redirección 80 → 443, las dos aplicaciones, la API rechazando peticiones sin token (401) y con credenciales malas (401), y un acceso real del administrador con respuesta 200 en `/api/auth/yo`, `/api/incidencias`, `/api/incidencias/mias` y `/api/usuarios`.
+**Resultado probado (3-oct-2026).** `scripts/verificar-despliegue.sh` ejecutó **52 comprobaciones y las 52 pasaron** sobre el despliegue reconstruido desde `main`: 40 comprobaciones de contenedores, proxy, acceso real y seguridad web, más 12 de replicación de PostgreSQL. La salida completa está en [`evidencia/despliegue-main-2026-10-03.txt`](evidencia/despliegue-main-2026-10-03.txt).
 
 ### Consumo medido
 
 | Elemento | Valor |
 |---|---|
-| Backend | 288 MiB |
-| Postgres | 51 MiB |
-| Nginx (los tres) | ~10 MiB en total |
-| Sistema completo | 1,2 GiB usados de 3,9 GiB; swap sin usar |
+| Backend | 296,4 MiB |
+| Postgres primaria | 40,86 MiB |
+| Postgres réplica | 19,96 MiB |
+| Proxy y dos frontends Nginx | ~11,2 MiB en total |
+| Sistema completo | 1,2 GiB usados de 3,8 GiB; 80 KiB de 2 GiB de swap |
 | Imágenes | backend 409 MB, cada frontend 74 MB |
-| Disco | 12 % usado de 61 GB |
+| Disco | 14 % usado de 61 GB |
 
-Todavía no incluye la réplica de Postgres ni Prometheus y Grafana; se sumarán en CLICKCLACK-60 y CLICKCLACK-13.
+La medición ya incluye la réplica de Postgres. **No incluye** Prometheus ni Grafana, que no están desplegados.
 
 ### Incidencias durante el despliegue
 
@@ -160,7 +161,7 @@ Insumo para la retrospectiva del Sprint 4:
 
 ### Procedencia del build
 
-Lo desplegado es una integración local de las ramas de los PR #1 a #5, que todavía no están fusionadas en `main`. El despliegue definitivo de la v1 debe hacerse desde `main` una vez fusionados los PR, y etiquetarse `v1-apf2` según CONTRIBUTING.
+**Decisión aplicada (3-oct-2026).** La versión desplegada se reconstruyó desde el commit `8ae83d1` de `main`, después de fusionar los PR #19, #11, #13 y #14, y quedó publicada con la etiqueta anotada `v1-apf2`. El paquete transferido tuvo SHA-256 `d47f49c8e54ff89ca0b4f60da619be04e5838d9348645fd1355f865af1016f4c`; se conservaron el `.env` y los datos existentes de la VM. El directorio anterior quedó como respaldo recuperable en `/home/azureuser/clickclak-prev-before-8ae83d1`.
 
 ## 7. Cómo recrearla
 

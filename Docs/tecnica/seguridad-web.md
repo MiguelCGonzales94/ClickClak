@@ -66,7 +66,7 @@ Activos a proteger, en orden de importancia: los datos de asistencia y ubicació
 
 ### 4.2 Verificación del despliegue
 
-`infra/scripts/verificar-despliegue.sh` ejecuta **39 comprobaciones** en la VM real y las 39 pasan. Las 22 de seguridad web comprueban, en los puertos 443 y 8443, las cabeceras de seguridad y que el servidor no revele su versión; además HSTS coherente con el certificado, ausencia de cabeceras duplicadas en la API, `/actuator` y archivos ocultos con 404, `TRACE` con 405, errores sin detalles internos y el límite de la recuperación de clave.
+**Resultado probado (3-oct-2026).** `infra/scripts/verificar-despliegue.sh` ejecutó **52 comprobaciones** en la VM real y las 52 pasaron: 40 corresponden al despliegue y la seguridad web, y 12 a la replicación de PostgreSQL. Las 22 específicas de seguridad web comprueban, en los puertos 443 y 8443, las cabeceras de seguridad y que el servidor no revele su versión; además HSTS coherente con el certificado, ausencia de cabeceras duplicadas en la API, `/actuator` y archivos ocultos con 404, `TRACE` con 405, errores sin detalles internos y el límite de la recuperación de clave. La salida completa está en [`evidencia/despliegue-main-2026-10-03.txt`](evidencia/despliegue-main-2026-10-03.txt).
 
 ### 4.3 La CSP en un navegador real
 

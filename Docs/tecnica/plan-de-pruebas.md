@@ -128,7 +128,8 @@ Script [prueba_e2e_marcacion.py](evidencia/prueba_e2e_marcacion.py). Crea sus pr
 |---|---|---|---|---|
 | CP-X01 | OE2 | Inicio de sesión con WebAuthn y biometría real | Exige un autenticador | Prueba en un dispositivo Android |
 | CP-X02 | OE4 | Cola sin conexión y sincronización diferida en el cliente | Exige service worker, geolocalización y WebAuthn | Prueba en Chrome Android |
-| CP-X03 | OE7, Seguridad | `verificar-despliegue.sh` (52 comprobaciones) y la CSP en el sitio desplegado | Exige la VM encendida y el código de `main` desplegado | Tras fusionar y desplegar |
+
+**Resultado probado (3-oct-2026).** CP-X03 dejó de estar pendiente: se desplegó el commit `8ae83d1` de `main` y `verificar-despliegue.sh` terminó con **52/52 comprobaciones correctas**. Véase [`evidencia/despliegue-main-2026-10-03.txt`](evidencia/despliegue-main-2026-10-03.txt).
 
 ## 7. Criterios
 
