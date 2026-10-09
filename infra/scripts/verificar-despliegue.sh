@@ -52,6 +52,16 @@ if [ -f "$CREDENCIALES" ]; then
         for ruta in /api/auth/yo /api/incidencias /api/incidencias/mias /api/usuarios; do
             resultado "GET $ruta con token" "200" "$(codigo -H "Authorization: Bearer $TOKEN" "https://localhost$ruta")"
         done
+        echo "== gestión de usuarios (detalle en scripts/verificar-usuarios.sh)"
+        # Con el token del administrador que ya inició sesión: no gasta otro login del cupo del proxy.
+        if SALIDA_USUARIOS=$(TOKEN_ADMIN="$TOKEN" sh scripts/verificar-usuarios.sh 2>&1); then
+            printf '%s
+' "$SALIDA_USUARIOS" | grep -E '^(OK|OMITIDO)'
+        else
+            printf '%s
+' "$SALIDA_USUARIOS" | grep -E '^(OK|FALLA|OMITIDO)'
+            FALLOS=$((FALLOS + 1))
+        fi
     else
         resultado "login del administrador" "correcto" "falló"
     fi

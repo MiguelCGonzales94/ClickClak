@@ -1,6 +1,6 @@
 # Base de datos — modelo lógico, físico y diccionario de datos
 
-> Cap. V 5.2 del informe (APF2) · Anexo B. Documento generado a partir del esquema real aplicado por Flyway (`V1__esquema_inicial.sql` y `V2__restricciones_e_indices.sql`), por lo que coincide con lo implementado. Si cambia el esquema, hay que regenerarlo.
+> Cap. V 5.2 del informe (APF2) · Anexo B. Documento generado a partir del esquema real aplicado por Flyway (`V1__esquema_inicial.sql`, `V2__restricciones_e_indices.sql` y `V3__usuarios_estado_cuenta.sql`), por lo que coincide con lo implementado. Si cambia el esquema, hay que regenerarlo.
 
 **Motor:** PostgreSQL 16 con PostGIS 3.4 · **Migraciones:** Flyway (`backend/src/main/resources/db/migration`) · **Tablas:** 12 · **Relaciones:** 18.
 
@@ -248,6 +248,9 @@ erDiagram
         varchar password_hash
         bigint rol_id FK
         boolean activo
+        boolean debe_cambiar_clave
+        timestamptz desactivado_en
+        varchar motivo_baja
         timestamptz creado_en
         timestamptz actualizado_en
     }
@@ -432,10 +435,13 @@ Persona que usa el sistema. Solo SUPERVISOR y RRHH_ADMIN tienen contraseña; el 
 | `apellidos` | `varchar(100)` | No |  |  | Apellidos de la persona. |
 | `tipo_documento` | `varchar(20)` | No |  | UQ (compuesto) | Tipo de documento de identidad (texto libre, p. ej. DNI). |
 | `numero_documento` | `varchar(20)` | No |  | UQ (compuesto) | Número del documento; único junto con el tipo. |
-| `correo` | `varchar(150)` | No |  | UQ | Correo electrónico; único, se usa como identificador de acceso. |
+| `correo` | `varchar(150)` | No |  | UQ | Correo electrónico; se guarda en minúsculas y es único sin distinguir mayúsculas (`uk_usuario_correo_minusculas`, V3). Se usa como identificador de acceso. |
 | `password_hash` | `varchar(255)` | Sí |  |  | Hash bcrypt de la contraseña. Nulo para colaboradores. |
 | `rol_id` | `bigint` | No |  | FK → `rol` | Rol asignado al usuario. |
 | `activo` | `boolean` | No | `true` |  | Baja lógica: falso impide el acceso sin borrar el historial. |
+| `debe_cambiar_clave` | `boolean` | No | `false` |  | Verdadero tras un restablecimiento por el administrador: el usuario solo puede cambiar su clave (V3). |
+| `desactivado_en` | `timestamp with time zone` | Sí |  |  | Fecha y hora de la baja; nulo mientras la cuenta está activa (V3). |
+| `motivo_baja` | `varchar(255)` | Sí |  |  | Motivo opcional de la baja (V3). |
 | `creado_en` | `timestamp with time zone` | No | `now()` |  | Fecha y hora de alta. |
 | `actualizado_en` | `timestamp with time zone` | No | `now()` |  | Fecha y hora de la última modificación. |
 
@@ -478,6 +484,7 @@ Además de los índices de las llaves primarias y de las restricciones únicas:
 | `idx_incidencia_historial_incidencia` | incidencia_historial (incidencia_id) | Trazabilidad de una incidencia. |
 | `idx_bitacora_entidad` | bitacora_auditoria (entidad, entidad_id) | Auditoría de un registro concreto. |
 | `idx_usuario_rol` | usuario (rol_id) | Join con rol (V2). |
+| `uk_usuario_correo_minusculas` | usuario (lower(correo)), único | Unicidad del correo sin distinguir mayúsculas y búsqueda por correo en el login (V3). |
 | `idx_asignacion_proyecto, idx_asignacion_ubicacion, idx_asignacion_horario` | asignacion (proyecto_id), (ubicacion_id), (horario_id) | Joins y verificación de llaves foráneas (V2). |
 | `idx_marcacion_asignacion, idx_marcacion_dispositivo` | marcacion (asignacion_id), (dispositivo_id) | Joins y verificación de llaves foráneas (V2). |
 | `idx_incidencia_marcacion, idx_incidencia_creado_por, idx_incidencia_revisado_por` | incidencia (marcacion_id), (creado_por_id), (revisado_por_id) | Joins y verificación de llaves foráneas (V2). |
@@ -494,9 +501,10 @@ Etiquetas: **Decisión** = adoptada y reflejada en el esquema · **Supuesto** = 
 - **Decisión.** **Deduplicación de reintentos.** `marcacion.uuid_cliente` es único y lo genera el dispositivo, de modo que reenviar una marcación pendiente no crea un duplicado.
 - **Decisión.** **Asignación versionada.** La marcación referencia la asignación vigente al momento del evento y no la actual, porque el personal de campo cambia de proyecto y de sede.
 - **Decisión.** **Validación graduada.** `estado_validacion` tiene cinco valores y no un binario válido/inválido, porque la geolocalización es imprecisa por naturaleza.
-- **Decisión.** **Bajas lógicas.** Se desactiva (`activo`) y no se borra, para conservar la trazabilidad de incidencias y marcaciones históricas.
+- **Decisión.** **Bajas lógicas.** Se desactiva (`activo`) y no se borra, para conservar la trazabilidad de incidencias y marcaciones históricas. **Excepción (8-oct-2026):** un usuario que nunca tuvo historial (ninguna marcación, incidencia, asignación, dispositivo ni entrada de auditoría a su nombre) puede eliminarse, para corregir altas por error; con historial el servidor responde 409 y se ofrece desactivarlo. La bitácora conserva lo que se borró.
+- **Decisión.** **El estado de cuenta no se guarda.** `ACTIVA`, `INACTIVA`, `BLOQUEADA` y `CLAVE_PENDIENTE` se calculan al responder a partir de `activo`, `debe_cambiar_clave` y el bloqueo por intentos fallidos (este último vive en memoria, no en la base).
 - **Decisión.** **Semilla solo en desarrollo.** El administrador de pruebas se carga con una migración repetible que únicamente incluye el perfil `dev`; producción no la ejecuta.
-- **Supuesto.** **`usuario.tipo_documento` es texto libre.** No se restringió porque no se ha definido el catálogo de documentos aceptados (DNI, carné de extranjería, pasaporte…). Conviene cerrarlo cuando se defina.
+- **Supuesto.** **`usuario.tipo_documento` es texto libre.** No se restringió porque no se ha definido el catálogo de documentos aceptados. El panel ya ofrece una lista (DNI, carné de extranjería, pasaporte) y valida el DNI a 8 dígitos, pero la base no lo exige: conviene cerrarlo cuando se defina el catálogo.
 - **Supuesto.** **`horario.dias_semana` es texto con códigos separados por coma.** Es suficiente para la versión 1; si se requiere consultar por día conviene normalizarlo en una tabla aparte.
 
 ## 8. Cómo reproducir
@@ -505,7 +513,7 @@ Etiquetas: **Decisión** = adoptada y reflejada en el esquema · **Supuesto** = 
 # 1. Base de datos local (PostGIS en el puerto 5434 del host)
 docker compose -f infra/docker-compose.yml up -d postgres
 
-# 2. Flyway aplica V1 y V2 al arrancar el backend (y la semilla, en perfil dev)
+# 2. Flyway aplica V1, V2 y V3 al arrancar el backend (y la semilla, en perfil dev)
 cd backend && ./mvnw spring-boot:run
 
 # 3. Pruebas, incluidas las de restricciones contra el Postgres real

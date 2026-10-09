@@ -85,6 +85,7 @@ Los casos automatizados se identifican por la clase de prueba; el número de pru
 | CP-A08 | Seguridad | Restricciones de integridad en la base | `RestriccionesBaseDatosTest` |
 | CP-A09 | Seguridad | JWT, política de contraseñas, tokens revocados y de recuperación, validación de entradas, errores uniformes, CORS, hora no futura | `JwtServiceTest`, `PoliticaContrasenasTest`, `AlmacenTokensRevocadosTest`, `AlmacenTokensRecuperacionTest`, `SeguridadWebTest` |
 | CP-A10 | Todos | La aplicación arranca con su contexto completo | `ClickClakBackendApplicationTests` |
+| CP-A11 | OE6, Seguridad | Gestión de usuarios (HU04, 8-oct-2026): un usuario desactivado o eliminado pierde el acceso en la siguiente petición; clave temporal obligatoria; cambio propio de contraseña y restablecimiento por el administrador; cambio de rol con y sin contraseña; protección del último administrador y de la propia cuenta; estado de cuenta; búsqueda paginada; eliminación solo sin historial; historial; correo sin distinguir mayúsculas; `jti` único en los tokens | `SesionUsuarioControllerTest`, `UsuarioGestionControllerTest`, `ClavesUsuarioControllerTest`, `CambioClaveServiceTest`, `GeneradorClaveTemporalTest`, y los casos nuevos de `UsuarioServiceTest`, `JwtServiceTest`, `RecuperacionClaveServiceTest` y `RestriccionesBaseDatosTest` |
 
 ### 6.2 Automatizados del frontend
 
@@ -92,8 +93,9 @@ Los casos automatizados se identifican por la clase de prueba; el número de pru
 |---|---|---|---|
 | CP-F01 | OE5 | Acciones disponibles por estado, bloqueos por separación de funciones, fecha máxima por tipo | `frontend-admin/src/incidencias/reglas.test.ts` |
 | CP-F02 | Todos | Compilación con `tsc` y build de producción de ambos frontends | `npm run build` |
+| CP-F03 | OE6 | Validación de documento, cambio de rol y contraseña, acciones disponibles por estado de cuenta, resumen del historial y validación de la clave nueva | `frontend-admin/src/usuarios/reglas.test.ts` |
 
-> **Brecha.** `frontend-campo` **no tiene pruebas automatizadas**, y el panel administrativo solo tiene las reglas puras de incidencias: no hay pruebas de componentes ni de la cola sin conexión.
+> **Brecha.** `frontend-campo` **no tiene pruebas automatizadas**, y el panel administrativo solo tiene las reglas puras de incidencias y de usuarios: no hay pruebas de componentes ni de la cola sin conexión.
 
 ### 6.3 Extremo a extremo por HTTP
 
@@ -121,6 +123,7 @@ Script [prueba_e2e_marcacion.py](evidencia/prueba_e2e_marcacion.py). Crea sus pr
 | CP-M02 | OE5 | Alta de incidencia: duplicado, fecha futura en ausencia y en permiso | 409; bloqueada; aceptada |
 | CP-M03 | OE5, Seguridad | Separación de funciones con supervisor y con administrador | Botón deshabilitado con el motivo; el servidor responde 403 |
 | CP-M04 | OE6 | Inicio de sesión y navegación por las secciones del panel | Cada sección carga sin errores en consola |
+| CP-M05 | OE6 | Gestión de usuarios (8-oct-2026): alta con DNI inválido y válido, búsqueda y filtros, restablecer contraseña, ingreso con la temporal, cambio obligatorio, baja con motivo, eliminación con y sin historial, historial y permisos de un supervisor | La temporal se muestra una sola vez; con la clave pendiente solo se llega a la pantalla de cambio; el 409 explica que se desactive; el supervisor no ve ni abre Usuarios |
 
 ### 6.5 No ejecutables en este entorno
 
@@ -128,6 +131,7 @@ Script [prueba_e2e_marcacion.py](evidencia/prueba_e2e_marcacion.py). Crea sus pr
 |---|---|---|---|---|
 | CP-X01 | OE2 | Inicio de sesión con WebAuthn y biometría real | Exige un autenticador | Prueba en un dispositivo Android |
 | CP-X02 | OE4 | Cola sin conexión y sincronización diferida en el cliente | Exige service worker, geolocalización y WebAuthn | Prueba en Chrome Android |
+| CP-X04 | OE6, Seguridad | `verificar-usuarios.sh` en la VM: corte de sesión al desactivar, clave temporal y eliminación sin historial | Probado solo en local (21 comprobaciones); falta ejecutarlo en la VM | Tras desplegar la rama de usuarios |
 
 **Resultado probado (3-oct-2026).** CP-X03 dejó de estar pendiente: se desplegó el commit `8ae83d1` de `main` y `verificar-despliegue.sh` terminó con **52/52 comprobaciones correctas**. Véase [`evidencia/despliegue-main-2026-10-03.txt`](evidencia/despliegue-main-2026-10-03.txt).
 
