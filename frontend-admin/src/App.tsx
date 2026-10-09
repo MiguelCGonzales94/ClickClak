@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { EstructuraPanel } from "./components/EstructuraPanel";
 import { PaginaAsignaciones } from "./pages/PaginaAsignaciones";
+import { PaginaAsistencia } from "./pages/PaginaAsistencia";
 import { PaginaCambiarClave } from "./pages/PaginaCambiarClave";
 import { PaginaDashboard } from "./pages/PaginaDashboard";
 import { PaginaIncidencias } from "./pages/PaginaIncidencias";
@@ -28,6 +29,7 @@ export default function App() {
               <Route element={<RutaProtegida rolesPermitidos={["RRHH_ADMIN"]} redirigirSinPermisoA="/" />}>
                 <Route path="/usuarios" element={<PaginaUsuarios />} />
               </Route>
+              <Route path="/asistencia" element={<PaginaAsistencia />} />
               <Route path="/sedes" element={<PaginaSedes />} />
               <Route path="/turnos" element={<PaginaTurnos />} />
               <Route path="/asignaciones" element={<PaginaAsignaciones />} />
