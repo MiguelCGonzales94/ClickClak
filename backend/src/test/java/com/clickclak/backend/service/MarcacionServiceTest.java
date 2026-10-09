@@ -16,6 +16,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -126,7 +127,7 @@ class MarcacionServiceTest {
         when(marcacionRepository.save(any(Marcacion.class))).thenAnswer(inv -> inv.getArgument(0));
         when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
         when(dispositivoRepository.findById(10L)).thenReturn(Optional.of(dispositivo));
-        when(asignacionRepository.buscarVigente(anyLong(), any(LocalDate.class))).thenReturn(Optional.empty());
+        when(asignacionRepository.buscarVigentes(anyLong(), any(LocalDate.class))).thenReturn(List.of());
 
         Marcacion resultado = marcacionService.registrarMarcacion(solicitud(UUID.randomUUID()));
 
@@ -141,7 +142,7 @@ class MarcacionServiceTest {
         when(marcacionRepository.save(any(Marcacion.class))).thenAnswer(inv -> inv.getArgument(0));
         when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
         when(dispositivoRepository.findById(10L)).thenReturn(Optional.of(dispositivo));
-        when(asignacionRepository.buscarVigente(anyLong(), any(LocalDate.class))).thenReturn(Optional.of(asignacion));
+        when(asignacionRepository.buscarVigentes(anyLong(), any(LocalDate.class))).thenReturn(List.of(asignacion));
         when(ubicacionRepository.calcularDistanciaMetros(anyLong(), anyDouble(), anyDouble())).thenReturn(50.0);
 
         RegistrarMarcacionRequest solicitud = new RegistrarMarcacionRequest(
@@ -161,7 +162,7 @@ class MarcacionServiceTest {
         when(marcacionRepository.save(any(Marcacion.class))).thenAnswer(inv -> inv.getArgument(0));
         when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
         when(dispositivoRepository.findById(10L)).thenReturn(Optional.of(dispositivo));
-        when(asignacionRepository.buscarVigente(anyLong(), any(LocalDate.class))).thenReturn(Optional.of(asignacion));
+        when(asignacionRepository.buscarVigentes(anyLong(), any(LocalDate.class))).thenReturn(List.of(asignacion));
         when(ubicacionRepository.calcularDistanciaMetros(anyLong(), anyDouble(), anyDouble())).thenReturn(50.0);
 
         RegistrarMarcacionRequest solicitud = new RegistrarMarcacionRequest(
@@ -171,6 +172,92 @@ class MarcacionServiceTest {
         marcacionService.registrarMarcacion(solicitud);
 
         verify(incidenciaService).registrarAutomatica(any(), any(), eq(TipoIncidencia.TARDANZA), any(), any());
+    }
+
+    @Test
+    void variasSedesVigentes_validaContraLaMasCercana() {
+        Asignacion lejana = asignacionEn(1L, 1L, 9, 0, 10, 150);
+        Asignacion cercana = asignacionEn(2L, 2L, 9, 0, 10, 150);
+        prepararMarcacionConVigentes(List.of(lejana, cercana));
+        when(ubicacionRepository.calcularDistanciaMetros(eq(1L), anyDouble(), anyDouble())).thenReturn(900.0);
+        when(ubicacionRepository.calcularDistanciaMetros(eq(2L), anyDouble(), anyDouble())).thenReturn(40.0);
+
+        Marcacion resultado = marcacionService.registrarMarcacion(solicitudEnHora(instanteLima(9, 5)));
+
+        assertThat(resultado.getAsignacion().getId()).isEqualTo(2L);
+        assertThat(resultado.getDistanciaMetros()).isEqualByComparingTo("40.00");
+        assertThat(resultado.getEstadoValidacion()).isEqualTo(EstadoValidacion.VALIDO);
+    }
+
+    @Test
+    void variasSedesVigentes_sinNingunaEnTolerancia_registraLaDistanciaDeLaMasProxima() {
+        Asignacion primera = asignacionEn(1L, 1L, 9, 0, 10, 150);
+        Asignacion segunda = asignacionEn(2L, 2L, 9, 0, 10, 150);
+        prepararMarcacionConVigentes(List.of(primera, segunda));
+        when(ubicacionRepository.calcularDistanciaMetros(eq(1L), anyDouble(), anyDouble())).thenReturn(5000.0);
+        when(ubicacionRepository.calcularDistanciaMetros(eq(2L), anyDouble(), anyDouble())).thenReturn(1200.0);
+
+        Marcacion resultado = marcacionService.registrarMarcacion(solicitudEnHora(instanteLima(9, 5)));
+
+        assertThat(resultado.getAsignacion().getId()).isEqualTo(2L);
+        assertThat(resultado.getDistanciaMetros()).isEqualByComparingTo("1200.00");
+        assertThat(resultado.getEstadoValidacion()).isEqualTo(EstadoValidacion.FUERA_DE_TOLERANCIA);
+    }
+
+    @Test
+    void variasSedesVigentes_conEmpateDeDistancia_ganaLaPrimeraDeLaLista() {
+        Asignacion primera = asignacionEn(1L, 1L, 9, 0, 10, 150);
+        Asignacion segunda = asignacionEn(2L, 2L, 9, 0, 10, 150);
+        prepararMarcacionConVigentes(List.of(primera, segunda));
+        when(ubicacionRepository.calcularDistanciaMetros(anyLong(), anyDouble(), anyDouble())).thenReturn(60.0);
+
+        Marcacion resultado = marcacionService.registrarMarcacion(solicitudEnHora(instanteLima(9, 5)));
+
+        assertThat(resultado.getAsignacion().getId()).isEqualTo(1L);
+    }
+
+    @Test
+    void variasSedesVigentes_laTardanzaSeMideContraElTurnoDeLaSedeElegida() {
+        Asignacion turnoTarde = asignacionEn(1L, 1L, 14, 0, 10, 150);
+        Asignacion turnoManana = asignacionEn(2L, 2L, 9, 0, 10, 150);
+        prepararMarcacionConVigentes(List.of(turnoTarde, turnoManana));
+        // Marca a las 9:30 junto a la sede del turno de las 9:00: es tardanza de esa sede, aunque
+        // frente al turno de las 14:00 de la otra sede no lo sería.
+        when(ubicacionRepository.calcularDistanciaMetros(eq(1L), anyDouble(), anyDouble())).thenReturn(3000.0);
+        when(ubicacionRepository.calcularDistanciaMetros(eq(2L), anyDouble(), anyDouble())).thenReturn(30.0);
+
+        marcacionService.registrarMarcacion(solicitudEnHora(instanteLima(9, 30)));
+
+        verify(incidenciaService).registrarAutomatica(any(), any(), eq(TipoIncidencia.TARDANZA), any(), any());
+    }
+
+    private void prepararMarcacionConVigentes(List<Asignacion> vigentes) {
+        when(marcacionRepository.findByUuidCliente(any())).thenReturn(Optional.empty());
+        when(marcacionRepository.save(any(Marcacion.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+        when(dispositivoRepository.findById(10L)).thenReturn(Optional.of(dispositivo));
+        when(asignacionRepository.buscarVigentes(anyLong(), any(LocalDate.class))).thenReturn(vigentes);
+    }
+
+    private RegistrarMarcacionRequest solicitudEnHora(Instant horaEvento) {
+        return new RegistrarMarcacionRequest(
+                UUID.randomUUID(), 1L, 10L, TipoEvento.ENTRADA, horaEvento,
+                -12.0464, -77.0428, BigDecimal.valueOf(10));
+    }
+
+    /** Una asignación en una sede propia (id de ubicación distinto), para probar varias a la vez. */
+    private Asignacion asignacionEn(long asignacionId, long ubicacionId, int horaInicioH, int horaInicioM,
+                                    int toleranciaMinutos, int radioToleranciaMetros) {
+        Proyecto proyecto = Proyecto.builder().id(1L).nombre("Proyecto Demo").cliente("Cliente Demo").build();
+        Ubicacion ubicacion = Ubicacion.builder().id(ubicacionId).proyecto(proyecto)
+                .radioToleranciaMetros(radioToleranciaMetros).build();
+        Horario horario = Horario.builder().id(asignacionId)
+                .horaInicio(LocalTime.of(horaInicioH, horaInicioM))
+                .horaFin(LocalTime.of(18, 0))
+                .toleranciaMinutos(toleranciaMinutos)
+                .build();
+        return Asignacion.builder().id(asignacionId).usuario(usuario).proyecto(proyecto)
+                .ubicacion(ubicacion).horario(horario).fechaInicio(LocalDate.of(2026, 1, 1)).build();
     }
 
     private RegistrarMarcacionRequest solicitud(UUID uuidCliente) {

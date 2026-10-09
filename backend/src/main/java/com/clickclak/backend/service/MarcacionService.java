@@ -101,7 +101,21 @@ public class MarcacionService {
         }
 
         LocalDate fechaEvento = solicitud.horaEvento().atZone(ZONA_HORARIA_PERU).toLocalDate();
-        Asignacion asignacion = asignacionRepository.buscarVigente(usuario.getId(), fechaEvento).orElse(null);
+
+        // Un técnico puede tener varias sedes vigentes a la vez. La marcación se valida contra la más
+        // cercana al punto donde marcó: es la que mejor explica dónde está, y si ninguna alcanza, la
+        // distancia que queda registrada es la de la sede más próxima y no la de una cualquiera. Un
+        // empate lo resuelve el orden de la consulta (la que empezó antes, y luego la de menor id).
+        Asignacion asignacion = null;
+        double distancia = 0;
+        for (Asignacion candidata : asignacionRepository.buscarVigentes(usuario.getId(), fechaEvento)) {
+            double distanciaACandidata = ubicacionRepository.calcularDistanciaMetros(
+                    candidata.getUbicacion().getId(), solicitud.latitud(), solicitud.longitud());
+            if (asignacion == null || distanciaACandidata < distancia) {
+                asignacion = candidata;
+                distancia = distanciaACandidata;
+            }
+        }
 
         Point punto = FABRICA_GEOMETRIA.createPoint(new Coordinate(solicitud.longitud(), solicitud.latitud()));
 
@@ -111,8 +125,6 @@ public class MarcacionService {
         if (asignacion == null) {
             estadoValidacion = EstadoValidacion.SIN_ASIGNACION;
         } else {
-            double distancia = ubicacionRepository.calcularDistanciaMetros(
-                    asignacion.getUbicacion().getId(), solicitud.latitud(), solicitud.longitud());
             distanciaMetros = BigDecimal.valueOf(distancia).setScale(2, RoundingMode.HALF_UP);
 
             var resultado = motorValidacionContextual.validarUbicacion(
