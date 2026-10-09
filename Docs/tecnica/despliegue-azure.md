@@ -179,6 +179,8 @@ Insumo para la retrospectiva del Sprint 4:
 
 **Decisión aplicada (3-oct-2026).** La versión desplegada se reconstruyó desde el commit `8ae83d1` de `main`, después de fusionar los PR #19, #11, #13 y #14, y quedó publicada con la etiqueta anotada `v1-apf2`. El paquete transferido tuvo SHA-256 `d47f49c8e54ff89ca0b4f60da619be04e5838d9348645fd1355f865af1016f4c`; se conservaron el `.env` y los datos existentes de la VM. El directorio anterior quedó como respaldo recuperable en `/home/azureuser/clickclak-prev-before-8ae83d1`.
 
+**Actualización (9-oct-2026).** Se desplegó dos veces más desde `main`, con el mismo procedimiento: `b5e429f` (módulo de usuarios completo, PR #21 a #26) y `a35f19e` (PR #27, codificación de los mensajes 401 y 403). Antes del primero se hizo un respaldo con `pg_dump` en `~/respaldos/` y se aplicó la migración V3; antes de cada paquete se comparó la VM con él con `diff` (así se detectó que `main` no tenía los cambios de #21, que la VM ya corría). Los directorios anteriores quedaron en `~/clickclak-prev-before-b5e429f` y `~/clickclak-prev-before-a35f19e`. Resultado: `verificar-despliegue.sh` con **73 comprobaciones correctas** (ver [resultados-de-pruebas.md](resultados-de-pruebas.md), 9.7, y [`evidencia/despliegue-main-2026-10-09.txt`](evidencia/despliegue-main-2026-10-09.txt)). El cupo de login del proxy es de 10 por minuto con ráfaga de 5: repetir la verificación enseguida da 429 falsos.
+
 ## 7. Cómo recrearla
 
 Preparación de la suscripción (una sola vez): registrar los proveedores `Microsoft.Compute`, `Microsoft.Network`, `Microsoft.Storage` y `Microsoft.DevTestLab`.
