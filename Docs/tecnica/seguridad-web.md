@@ -42,6 +42,12 @@ Activos a proteger, en orden de importancia: los datos de asistencia y ubicació
 | C20 | **Secretos fuera del repositorio**: se generan en la VM con `openssl` y viven en un archivo con permisos 600; sin cuenta de desarrollo en producción | Infra | `despliegue-azure.md`; migraciones sin la semilla `dev` |
 | C21 | **Acceso a la VM solo por llave SSH** (contraseña desactivada) y `fail2ban` | Infra | `sshd -T`: `passwordauthentication no` |
 | C22 | **Cifrado en reposo del disco** con clave de la plataforma | Infra | `az disk`: `EncryptionAtRestWithPlatformKey` |
+| C23 | **Sesión ligada al estado del usuario** (8-oct): el filtro JWT consulta al usuario en cada petición; desactivarlo o eliminarlo le quita el acceso de inmediato aunque su token siga vigente, y el rol sale de la base, no del token | Backend | `SesionUsuarioControllerTest` (5) |
+| C24 | **Cambio de contraseña propio**: exige la actual, aplica la política, rechaza una igual, cuenta los fallos en el mismo bloqueo del login, revoca el token en uso y no guarda ninguna clave en la bitácora | Backend | `CambioClaveServiceTest` (7), `ClavesUsuarioControllerTest` |
+| C25 | **Restablecimiento por el administrador con clave temporal de un solo uso**: 12 caracteres con `SecureRandom`, se muestra una vez (`Cache-Control: no-store`), obliga a cambiarla y mientras tanto el filtro solo deja pasar el cambio de clave, el cierre de sesión y el perfil | Backend | `GeneradorClaveTemporalTest` (3), `ClavesUsuarioControllerTest`, `verificar-usuarios.sh` |
+| C26 | **Protección de administradores**: nadie se desactiva, se elimina ni se cambia el rol a sí mismo, y no se puede desactivar ni bajar de rol al último administrador activo | Backend | `UsuarioServiceTest`, `UsuarioGestionControllerTest` |
+| C27 | **Eliminación solo sin historial** y **correo único sin distinguir mayúsculas** (`uk_usuario_correo_minusculas`, V3) | Backend, Base de datos | `UsuarioGestionControllerTest`, `RestriccionesBaseDatosTest` |
+| C28 | **Cada JWT lleva un `jti` único**: sin él, dos tokens del mismo usuario emitidos en el mismo segundo eran idénticos y revocar uno dejaba inservible el otro | Backend | `JwtServiceTest.dosTokensDelMismoUsuarioEnElMismoInstante_sonDistintos` |
 
 ## 3. OWASP Top 10 (2021)
 
@@ -53,7 +59,7 @@ Activos a proteger, en orden de importancia: los datos de asistencia y ubicació
 | **A04** Diseño inseguro | **Parcial** | C8, C13, C17 y el flujo de estados de las incidencias. No hay un modelo de amenazas formal más allá de esta sección. |
 | **A05** Configuración de seguridad incorrecta | **Implementado** | C2, C3, C6, C7, C15, C16. Se detectó y corrigió que el proxy conservaba el `default.conf` de la imagen (página de bienvenida) y que un cambio de configuración no se aplicaba sin recrear el contenedor. |
 | **A06** Componentes vulnerables | **Parcial** | `npm audit` (solo producción): **2 moderadas en cada frontend**, ambas de `react-router-dom` 6.x: redirección abierta con barra invertida en `<Link>`/`useNavigate`, e inyección en hidratación SSR. **No son explotables aquí:** todos los destinos de navegación son literales y no hay SSR. El arreglo exige pasar a la versión 7 (cambio mayor); ver pendientes. **Las dependencias del backend no se han analizado.** |
-| **A07** Fallos de identificación y autenticación | **Parcial** | C8, C9, C10, C11. Faltan: segundo factor para supervisores y RRHH (solo los colaboradores usan WebAuthn), política de contraseñas más exigente y cambio de contraseña con sesión iniciada. |
+| **A07** Fallos de identificación y autenticación | **Parcial** | C8, C9, C10, C11. C23 a C26 (8-oct) agregan el cambio de contraseña con sesión iniciada y el corte de acceso al desactivar. Faltan: segundo factor para supervisores y RRHH (solo los colaboradores usan WebAuthn) y una política de contraseñas más exigente. |
 | **A08** Fallos de integridad de software y datos | **Pendiente** | No hay integración continua ni verificación de las imágenes base (CLICKCLACK-9). Las imágenes vienen de los registros oficiales. |
 | **A09** Fallos de registro y monitoreo | **Parcial** | C18 y los logs de error del backend. Faltan alertas de eventos de seguridad (intentos bloqueados, 429, 401 repetidos): dependen del monitoreo de CLICKCLACK-13. |
 | **A10** Falsificación de petición del lado del servidor | **No aplica** | El backend no hace peticiones a direcciones indicadas por el usuario. |
@@ -61,6 +67,8 @@ Activos a proteger, en orden de importancia: los datos de asistencia y ubicació
 ## 4. Evidencia
 
 ### 4.1 Pruebas automatizadas del backend
+
+**Actualización (8-oct-2026):** con el módulo de usuarios la suite pasó a **244 pruebas, 0 fallos**; las 66 nuevas cubren C23 a C28 (detalle en [resultados-de-pruebas.md](resultados-de-pruebas.md), sección 9).
 
 178 pruebas, 0 fallos, contra Postgres real. De ellas, **30 son nuevas de este trabajo**: `SeguridadWebTest` (16), `AlmacenIntentosFallidosTest` (9) y 5 casos nuevos en `AutenticacionServiceTest`. Cubren bloqueo con ventana de tiempo, comparación contra hash ficticio, errores sin detalles internos (JSON mal formado, método no permitido, ruta inexistente, tipo no soportado, fallo interno), CORS, catálogos por rol, Actuator protegido, cabeceras en las respuestas de error y validación de entradas.
 
@@ -94,7 +102,9 @@ Además, un análisis de lo que sirve la app desplegada no encontró scripts ni 
 | Bloqueo dirigido | Quien conozca un correo puede bloquearlo 15 minutos enviando intentos fallidos | Costo de bloquear por cuenta; el límite por IP del proxy acota la repetición |
 | Cupo por IP compartida | Técnicos tras la misma IP de operador de telefonía comparten el límite del login | El cupo (10/min, ráfaga 5) deja margen para uso normal |
 | SSH abierto a cualquier IP | El equipo se conecta desde sitios distintos | Solo llave, sin contraseña, y `fail2ban` |
-| JWT simétrico de 8 horas | Sin renovación ni rotación; la revocación solo ocurre al cerrar sesión | Vigencia pensada para operar con poca conectividad |
+| JWT simétrico de 8 horas | Sin renovación ni rotación. Se revoca al cerrar sesión o cambiar la clave; desactivar o eliminar al usuario corta el acceso en la siguiente petición (C23), a costa de una consulta a la base por petición | Vigencia pensada para operar con poca conectividad |
+| Clave temporal visible en pantalla | Sin servicio de correo, el administrador ve la clave temporal una vez y debe entregarla al usuario por otro medio | Aceptado para esta versión; con SMTP se enviaría por correo |
+| Bloqueo por intentos en memoria | El estado `BLOQUEADA` que muestra el panel sale del mismo almacén en memoria del bloqueo (C8): se pierde al reiniciar el backend | Aceptado; ya declarado en la fila de estado en memoria |
 | Sin segundo factor para administradores | Supervisores y RRHH entran solo con contraseña | Pendiente |
 | Sin análisis de dependencias del backend | Solo se auditaron las de los frontends | Pendiente |
 | Sin WAF, sin detección de intrusiones | El límite de peticiones y `fail2ban` son las únicas defensas activas contra abuso | El monitoreo de CLICKCLACK-13 aportará visibilidad |

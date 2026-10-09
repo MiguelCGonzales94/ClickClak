@@ -4,6 +4,8 @@ Ejecución local del [plan de validación](plan-de-pruebas.md) el 3-oct-2026 (CL
 
 Las etiquetas siguen la convención del proyecto: **Requerimiento**, **Supuesto**, **Recomendación**, **Decisión**.
 
+> **Actualización del 8-oct-2026.** El módulo de usuarios (HU04) se amplió después de este corte: la sección 9 recoge sus resultados (backend 244 pruebas, panel 40 pruebas, 21 comprobaciones del script de usuarios en local y un recorrido manual por el panel). Las cifras de las secciones 1 a 8 son las del 3-oct y no se modificaron.
+
 > **Qué se probó y qué no.** El primer corte se ejecutó en local sobre un simulacro de la fusión de los 13 PR abiertos (commit `6a1fb44` de un worktree local, no subido). Después de fusionar, la suite completa del backend se repitió sobre `main` (`8ae83d1`) con JDK 21 y el despliegue de Azure se verificó con 52/52 comprobaciones correctas. WebAuthn real y la cola sin conexión del service worker **no se probaron** y siguen en la sección 5. No se hicieron pruebas de carga (decisión del 3-oct).
 
 ## 1. Resumen
@@ -128,3 +130,73 @@ python Docs/tecnica/evidencia/prueba_e2e_marcacion.py http://localhost:8080
 ```
 
 Conviene repetir todo **tras fusionar los PR en `main`** y, una vez desplegado, ejecutar `verificar-despliegue.sh` en la VM (CP-X03).
+
+
+## 9. Actualización: módulo de usuarios (8-oct-2026)
+
+Ejecución local del módulo de usuarios ampliado (HU04), en cinco pull requests apilados (#22 a #25 y el de documentación). Las pruebas del backend y del panel corrieron sobre la rama de cada fase; el recorrido manual y el script de verificación, contra el backend en perfil `dev` y la base local. **No se probó en la VM de Azure.**
+
+### 9.1 Resumen
+
+| Prueba | Antes (3-oct) | Ahora (8-oct) | Resultado |
+|---|---|---|---|
+| Backend: clases y pruebas | 28 clases, 178 pruebas | **33 clases, 244 pruebas** | 0 fallos, 0 errores, 0 omitidas |
+| `frontend-admin`: pruebas Vitest | 17 | **40** | Correcto; `tsc` y build de producción correctos |
+| `verificar-usuarios.sh` (local) | no existía | **21 comprobaciones** | 21 correctas |
+| Recorrido manual del panel (CP-M05) | no existía | 11 casos | Correcto (ver 9.4) |
+
+### 9.2 Pruebas nuevas del backend (66)
+
+| Clase | Pruebas | Qué cubre |
+|---|---|---|
+| `UsuarioServiceTest` | 39 (29 nuevas) | Correo normalizado, cambio de rol con y sin contraseña, protección del último administrador y de la propia cuenta, baja con motivo, desbloqueo, eliminación con y sin historial, restablecimiento de clave, estado de cuenta |
+| `UsuarioGestionControllerTest` | 12 | Búsqueda paginada (texto, rol, estado, comodines como literales), permisos por rol, baja y reactivación, desbloqueo, eliminación (204 y 409) e historial, contra la base real |
+| `SesionUsuarioControllerTest` | 5 | Usuario desactivado o eliminado con token vigente: 401; cambio de rol con efecto inmediato; clave pendiente: 403 salvo perfil y cierre de sesión |
+| `ClavesUsuarioControllerTest` | 6 | Flujo completo con BCrypt real: restablecer, entrar con la temporal, quedar limitado, cambiarla, que la temporal deje de servir, y que ninguna clave aparezca en la bitácora |
+| `CambioClaveServiceTest` | 7 | Clave actual incorrecta (cuenta como fallo), clave débil, igual a la actual, cuenta bloqueada, colaborador, usuario inactivo |
+| `GeneradorClaveTemporalTest` | 3 | Cumple la política, longitud y caracteres sin ambigüedad, unicidad |
+| `JwtServiceTest` | 4 (1 nueva) | Dos tokens del mismo usuario en el mismo instante son distintos |
+| `RecuperacionClaveServiceTest` | 8 (1 nueva) | La recuperación por enlace limpia la marca de clave pendiente |
+| `RestriccionesBaseDatosTest` | 10 (2 nuevas) | Correos que solo difieren en mayúsculas y valores por defecto de V3 |
+
+La migración **V3** se probó además a mano en una base aparte: con correos duplicados salvo por mayúsculas **se detiene con un mensaje claro y revierte todo** (dentro de una transacción, como la ejecuta Flyway); sin duplicados normaliza el correo y crea el índice.
+
+### 9.3 `verificar-usuarios.sh`
+
+21 comprobaciones contra el backend local (`URL_BASE=http://localhost:8080`): alta de un supervisor temporal y búsqueda, sesión con su clave, restablecimiento (la temporal llega con `Cache-Control: no-store` y 12 caracteres), estado `CLAVE_PENDIENTE`, sesión previa limitada con 403 y código `CLAVE_PENDIENTE`, perfil aún disponible, clave anterior rechazada, ingreso con la temporal avisando el cambio, desactivación con motivo, token vigente rechazado de inmediato (401), el administrador no puede eliminarse a sí mismo (409), eliminación del usuario temporal (204) y 404 posterior. El usuario temporal no queda en la base. Ahora lo invoca `verificar-despliegue.sh`.
+
+### 9.4 Recorrido manual (CP-M05)
+
+Backend en perfil `dev` y panel en el navegador integrado, con el administrador de la semilla de desarrollo.
+
+| Caso | Resultado |
+|---|---|
+| Alta con DNI de 3 dígitos | Se bloquea con "El DNI debe tener 8 dígitos" |
+| Alta de un supervisor con DNI válido y correo con mayúsculas | Se crea; el correo queda en minúsculas |
+| Menú de acciones de un supervisor activo | Editar, Restablecer contraseña, Ver historial, Desactivar, Eliminar |
+| Restablecer contraseña | Muestra una clave de 12 caracteres una sola vez; la fila pasa a "Clave pendiente" |
+| Ingreso con la temporal; intentar abrir `/usuarios` | Redirige a la pantalla de cambio de contraseña, la única disponible |
+| Confirmación distinta y luego correcta | Se rechaza con el mensaje; la correcta vuelve al login con el aviso y la sesión borrada |
+| Ingreso con la clave nueva; Supervisor ante Usuarios | Entra sin marca pendiente; no ve el enlace y `/usuarios` lo lleva al inicio |
+| Historial | Alta, restablecimiento y cambio de clave, sin ninguna clave en el texto |
+| Desactivar con motivo | Etiqueta "Inactiva" con el motivo como ayuda; el menú ofrece Activar |
+| Eliminar un usuario con historial | Error 409 dentro del cuadro: "…desactívelo en su lugar"; el usuario sigue |
+| Eliminar un usuario recién creado; búsqueda y filtros; edición con cambio de rol | Se elimina; la búsqueda y los filtros por estado y rol devuelven lo esperado; el cambio a un rol con clave pide contraseña y el contrario avisa que se borrará |
+
+Los datos de prueba se borraron de la base local. **No se guardaron capturas** en el repositorio.
+
+### 9.5 Defectos y hallazgos de esta actualización
+
+| ID | Severidad | Descripción | Estado |
+|---|---|---|---|
+| D-02 | Media | Dos tokens del mismo usuario emitidos en el mismo segundo eran idénticos, así que revocar uno (cierre de sesión o cambio de clave) dejaba inservible el otro: tras cambiar la clave, el login inmediato devolvía 401. Lo detectó `ClavesUsuarioControllerTest` | Corregido: cada JWT lleva un `jti` único (PR #24) |
+| D-03 | Baja | `verificar-usuarios.sh` enviaba un motivo con tilde y el servidor respondía 400 en una consola que no usa UTF-8 | Corregido: el motivo del script es ASCII |
+| H-06 | Hallazgo | Con una sesión guardada que ya no sirve (token de otra ejecución o revocado), el tablero lanza sus peticiones y deja errores 401 "Uncaught (in promise)" en la consola en vez de volver al login | Abierto; es del tablero, anterior a este trabajo |
+| H-07 | Hallazgo | `npm run lint` del panel no funciona: `eslint` no está instalado | Abierto; anterior a este trabajo |
+
+### 9.6 Brechas
+
+- **No se ejecutó en la VM.** `verificar-usuarios.sh` y la migración V3 sobre la base de producción están pendientes. Antes de aplicar V3 hay que comprobar que no hay correos duplicados salvo por mayúsculas: `SELECT lower(correo), count(*) FROM usuario GROUP BY 1 HAVING count(*) > 1;`.
+- **El estado `BLOQUEADA` sale de un almacén en memoria:** se pierde al reiniciar el backend (límite ya declarado).
+- La vista en un teléfono del panel de usuarios no se probó: el panel es de escritorio.
+- El cambio de contraseña obligatorio no está en `verificar-usuarios.sh` (cambiar la clave dejaría historial y el usuario temporal ya no podría eliminarse); lo cubren `ClavesUsuarioControllerTest` y el recorrido manual.
