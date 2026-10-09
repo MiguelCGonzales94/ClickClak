@@ -4,7 +4,7 @@ Ejecución local del [plan de validación](plan-de-pruebas.md) el 3-oct-2026 (CL
 
 Las etiquetas siguen la convención del proyecto: **Requerimiento**, **Supuesto**, **Recomendación**, **Decisión**.
 
-> **Actualización del 8-oct-2026.** El módulo de usuarios (HU04) se amplió después de este corte: la sección 9 recoge sus resultados (backend 244 pruebas, panel 40 pruebas, 21 comprobaciones del script de usuarios en local y un recorrido manual por el panel). Las cifras de las secciones 1 a 8 son las del 3-oct y no se modificaron. El despliegue y la verificación en la VM del 9-oct-2026 están en 9.7.
+> **Actualización del 8-oct-2026.** El módulo de usuarios (HU04) se amplió después de este corte: la sección 9 recoge sus resultados (backend 244 pruebas, panel 40 pruebas, 21 comprobaciones del script de usuarios en local y un recorrido manual por el panel). Las cifras de las secciones 1 a 8 son las del 3-oct y no se modificaron. El despliegue y la verificación en la VM del 9-oct-2026 están en 9.7. El módulo de asistencia, que cierra H-09, está en 9.8.
 
 > **Qué se probó y qué no.** El primer corte se ejecutó en local sobre un simulacro de la fusión de los 13 PR abiertos (commit `6a1fb44` de un worktree local, no subido). Después de fusionar, la suite completa del backend se repitió sobre `main` (`8ae83d1`) con JDK 21 y el despliegue de Azure se verificó con 52/52 comprobaciones correctas. WebAuthn real y la cola sin conexión del service worker **no se probaron** y siguen en la sección 5. No se hicieron pruebas de carga (decisión del 3-oct).
 
@@ -196,12 +196,12 @@ Los datos de prueba se borraron de la base local. **No se guardaron capturas** e
 | H-07 | Hallazgo | `npm run lint` del panel no funciona: `eslint` no está instalado | Abierto; anterior a este trabajo |
 | D-04 | Baja | Los 401 y 403 del filtro de seguridad se escribían sin fijar la codificación y salían en ISO-8859-1: la "ñ" de "contraseña" y la "ó" de "operación" llegaban como un byte que no es UTF-8 válido. Lo detectó `verificar-usuarios.sh` en la VM (20/21) | Corregido: PR #27, con una prueba que falla sin el arreglo; la VM quedó en 21/21 |
 | H-08 | Hallazgo | Al comparar la VM con el paquete de `main` antes de desplegar se vio que la VM corría los cambios del PR #21 (Let's Encrypt y la corrección del login en :8443) que `main` no tenía. Desplegar `main` tal cual habría devuelto el 403 al login del panel | Resuelto: se fusionó #21 antes de desplegar. Queda como regla: comparar siempre con `diff` antes de pisar la VM |
-| H-09 | Hallazgo funcional | **No existe consulta de marcaciones.** El backend solo expone `POST /api/marcaciones` (registrar); no hay un endpoint para listarlas ni una pantalla en el panel. Hoy el supervisor solo ve el efecto de una marcación a través de las incidencias de tardanza | Abierto: es una funcionalidad por construir, no un defecto de este módulo |
+| H-09 | Hallazgo funcional | **No existía consulta de marcaciones.** El backend solo exponía `POST /api/marcaciones` (registrar); no había un endpoint para listarlas ni una pantalla en el panel, y el supervisor solo veía el efecto de una marcación a través de las incidencias de tardanza | **Cerrado el 9-oct-2026:** módulo de asistencia (PR #29 y #30), desplegado en la VM con `8577561`; ver 9.8 |
 
 ### 9.6 Brechas
 
 - **La VM ya se verificó (9-oct-2026), ver 9.7.** Antes de aplicar V3 se comprobó que no había correos duplicados salvo por mayúsculas.
-- **Sin pantalla ni consulta de marcaciones** (H-09): las marcaciones de los colaboradores no se pueden revisar desde el panel administrativo.
+- **Consulta de marcaciones (H-09): resuelta el 9-oct-2026**, ver 9.8. Siguen fuera de alcance exportar a CSV, que el colaborador vea sus propias marcaciones y un mapa integrado.
 - **El estado `BLOQUEADA` sale de un almacén en memoria:** se pierde al reiniciar el backend (límite ya declarado).
 - La vista en un teléfono del panel de usuarios no se probó: el panel es de escritorio.
 - El cambio de contraseña obligatorio no está en `verificar-usuarios.sh` (cambiar la clave dejaría historial y el usuario temporal ya no podría eliminarse); lo cubren `ClavesUsuarioControllerTest` y el recorrido manual.
@@ -225,3 +225,27 @@ El módulo se fusionó en `main` y se desplegó en la VM `vm-clickclak` el 9-oct
 **Lo que no prueba.** Es una verificación automática por HTTP. No se repitió el recorrido manual del panel (CP-M05) contra producción, y siguen pendientes WebAuthn con un autenticador real y la cola sin conexión (CP-X01 y CP-X02). Cada ejecución del script deja cuatro entradas de auditoría de un usuario ya borrado (alta, restablecimiento, baja y eliminación): es el rastro esperado.
 
 **Respaldos en la VM.** `~/respaldos/clickclak-antes-de-b5e429f.sql` (base antes de la V3) y los directorios `~/clickclak-prev-before-b5e429f` y `~/clickclak-prev-before-a35f19e` con el código anterior de cada despliegue.
+
+
+### 9.8 Módulo de asistencia (9-oct-2026)
+
+Cierra el hallazgo H-09. PR #29 (backend) y #30 (panel), fusionados y desplegados en la VM con `8577561`. La descripción del módulo, su API y sus límites están en [modulo-asistencia.md](modulo-asistencia.md).
+
+| Prueba | Resultado |
+|---|---|
+| Backend | **254 pruebas, 0 fallos** (245 antes). Las 9 nuevas son `AsistenciaControllerTest`, contra la base real con PostGIS: datos y orden, bordes de día en hora de Lima, combinación de filtros, `SIN_ASIGNACION`, retraso de sincronización, paginación y tamaños inválidos, filtros mal formados, resumen y permisos por rol |
+| Panel | **55 pruebas Vitest** (40 antes; 15 nuevas en `asistencia/reglas.test.ts`); `tsc` y build de producción correctos |
+| Recorrido manual local (CP-M06) | Correcto, con 5 marcaciones de prueba (válida, observada sincronizada 3 h 12 min después, fuera de tolerancia, sospechosa y sin asignación) sumadas a las 6 del script E2E: la lista de hoy trae 4; el resumen y las etiquetas filtran; los atajos *Hoy*, *Ayer* y *Últimos 7 días* cambian el rango; el detalle muestra la explicación del estado y el enlace al mapa; un rango invertido se avisa sin consultar al servidor; filtran persona, sede y tipo, y *Limpiar filtros* restablece. Las marcaciones de prueba se borraron |
+| Despliegue (`8577561`) | El SHA-256 coincide entre el equipo y la VM; la comparación previa con `diff` mostró solo los archivos del módulo; sin migración (Flyway sigue en la versión 3) |
+| `verificar-despliegue.sh` en la VM | **73 comprobaciones correctas, 0 fallos**: 6 de contenedores, 6 del proxy, 6 del acceso real, 22 de seguridad web, 21 de gestión de usuarios y 12 de replicación. Salida en [`evidencia/despliegue-main-2026-10-09-asistencia.txt`](evidencia/despliegue-main-2026-10-09-asistencia.txt) |
+| Endpoints de asistencia en la VM | Sin token: 401. Con el administrador, el listado y el resumen responden 200 en :443 y :8443. Estado desconocido, rango invertido y `tamano=101`: 400. La ruta `/asistencia` del panel responde 200 |
+| Desde fuera de la VM | La app de campo y el panel responden 200; `/api/marcaciones` sin token responde 401 |
+
+**Corregido antes de abrir el PR.** El filtro *Persona* listaba solo colaboradores, pero cualquier usuario autenticado puede marcar su asistencia (las marcaciones del script E2E son de supervisores). Ahora lista a todos y marca el rol de quien no es colaborador.
+
+**Observación sobre la base de producción.** Tiene 6 marcaciones (2 entradas y 4 salidas) y **las 6 están en estado `SOSPECHOSO`**. Todas son del 3-oct-2026 a las 04:44 (hora de Lima), de **un mismo integrante del equipo**, con una precisión reportada de 2 000 m y la misma distancia a la sede (2 181 m): son una prueba hecha desde un equipo con ubicación aproximada, no marcaciones de campo. **La pantalla de asistencia muestra el nombre de esa persona**, así que aplica lo dicho en H-05: no deben aparecer en capturas que se enlacen en el informe. **Recomendación:** decidir con el equipo si se conservan o se retiran de producción antes de una demostración; no se borró nada.
+
+**Brechas de esta actualización**
+- **CP-X05, pendiente:** no se hizo el recorrido manual de la pantalla de asistencia contra producción; en la VM solo se comprobó por HTTP.
+- No se midió el rendimiento con un volumen alto de marcaciones: la consulta trae las asociaciones en una sola consulta, pero solo se probó con unas pocas filas (hasta 11).
+- Siguen fuera, y declarados en [modulo-asistencia.md](modulo-asistencia.md): exportar a CSV, que el colaborador vea sus marcaciones, un mapa integrado y limitar a cada supervisor a su personal.

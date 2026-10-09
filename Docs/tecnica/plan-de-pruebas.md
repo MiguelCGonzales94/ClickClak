@@ -86,6 +86,7 @@ Los casos automatizados se identifican por la clase de prueba; el número de pru
 | CP-A09 | Seguridad | JWT, política de contraseñas, tokens revocados y de recuperación, validación de entradas, errores uniformes, CORS, hora no futura | `JwtServiceTest`, `PoliticaContrasenasTest`, `AlmacenTokensRevocadosTest`, `AlmacenTokensRecuperacionTest`, `SeguridadWebTest` |
 | CP-A10 | Todos | La aplicación arranca con su contexto completo | `ClickClakBackendApplicationTests` |
 | CP-A11 | OE6, Seguridad | Gestión de usuarios (HU04, 8-oct-2026): un usuario desactivado o eliminado pierde el acceso en la siguiente petición; clave temporal obligatoria; cambio propio de contraseña y restablecimiento por el administrador; cambio de rol con y sin contraseña; protección del último administrador y de la propia cuenta; estado de cuenta; búsqueda paginada; eliminación solo sin historial; historial; correo sin distinguir mayúsculas; `jti` único en los tokens | `SesionUsuarioControllerTest`, `UsuarioGestionControllerTest`, `ClavesUsuarioControllerTest`, `CambioClaveServiceTest`, `GeneradorClaveTemporalTest`, y los casos nuevos de `UsuarioServiceTest`, `JwtServiceTest`, `RecuperacionClaveServiceTest` y `RestriccionesBaseDatosTest` |
+| CP-A12 | OE6, Seguridad | Consulta de asistencia (9-oct-2026): lista y resumen por estado, filtros por persona, proyecto, sede, rango de días de Lima, estado y tipo, marcaciones `SIN_ASIGNACION`, retraso de sincronización, paginación, filtros inválidos y permisos (solo supervisión) | `AsistenciaControllerTest` |
 
 ### 6.2 Automatizados del frontend
 
@@ -94,6 +95,7 @@ Los casos automatizados se identifican por la clase de prueba; el número de pru
 | CP-F01 | OE5 | Acciones disponibles por estado, bloqueos por separación de funciones, fecha máxima por tipo | `frontend-admin/src/incidencias/reglas.test.ts` |
 | CP-F02 | Todos | Compilación con `tsc` y build de producción de ambos frontends | `npm run build` |
 | CP-F03 | OE6 | Validación de documento, cambio de rol y contraseña, acciones disponibles por estado de cuenta, resumen del historial y validación de la clave nueva | `frontend-admin/src/usuarios/reglas.test.ts` |
+| CP-F04 | OE6 | Aritmética de fechas y atajos de rango, validación del rango, descripción del retraso de sincronización, etiquetas y colores de los estados, total por revisar y enlace al mapa | `frontend-admin/src/asistencia/reglas.test.ts` |
 
 > **Brecha.** `frontend-campo` **no tiene pruebas automatizadas**, y el panel administrativo solo tiene las reglas puras de incidencias y de usuarios: no hay pruebas de componentes ni de la cola sin conexión.
 
@@ -124,6 +126,7 @@ Script [prueba_e2e_marcacion.py](evidencia/prueba_e2e_marcacion.py). Crea sus pr
 | CP-M03 | OE5, Seguridad | Separación de funciones con supervisor y con administrador | Botón deshabilitado con el motivo; el servidor responde 403 |
 | CP-M04 | OE6 | Inicio de sesión y navegación por las secciones del panel | Cada sección carga sin errores en consola |
 | CP-M05 | OE6 | Gestión de usuarios (8-oct-2026): alta con DNI inválido y válido, búsqueda y filtros, restablecer contraseña, ingreso con la temporal, cambio obligatorio, baja con motivo, eliminación con y sin historial, historial y permisos de un supervisor | La temporal se muestra una sola vez; con la clave pendiente solo se llega a la pantalla de cambio; el 409 explica que se desactive; el supervisor no ve ni abre Usuarios |
+| CP-M06 | OE6 | Pantalla de asistencia (9-oct-2026): lista de hoy, resumen y etiquetas de estado, atajos de fecha, detalle con enlace al mapa, rango invertido, filtros de persona, sede y tipo | La lista, el resumen y el detalle coinciden con los datos; un rango invertido se avisa sin consultar al servidor |
 
 ### 6.5 No ejecutables en este entorno
 
@@ -132,6 +135,7 @@ Script [prueba_e2e_marcacion.py](evidencia/prueba_e2e_marcacion.py). Crea sus pr
 | CP-X01 | OE2 | Inicio de sesión con WebAuthn y biometría real | Exige un autenticador | Prueba en un dispositivo Android |
 | CP-X02 | OE4 | Cola sin conexión y sincronización diferida en el cliente | Exige service worker, geolocalización y WebAuthn | Prueba en Chrome Android |
 | CP-X04 | OE6, Seguridad | `verificar-usuarios.sh` en la VM: corte de sesión al desactivar, clave temporal y eliminación sin historial | **Ejecutado en la VM el 9-oct-2026: 21/21** tras el PR #27 (20/21 antes, por el defecto D-04) | Resultado en [resultados-de-pruebas.md](resultados-de-pruebas.md), 9.7 |
+| CP-X05 | OE6 | Recorrido manual de la pantalla de asistencia contra producción | Solo se probó por HTTP en la VM (73/73 y los endpoints del módulo) | Abrir `/asistencia` en el panel de producción con un administrador |
 
 **Resultado probado (3-oct-2026).** CP-X03 dejó de estar pendiente: se desplegó el commit `8ae83d1` de `main` y `verificar-despliegue.sh` terminó con **52/52 comprobaciones correctas**. Véase [`evidencia/despliegue-main-2026-10-03.txt`](evidencia/despliegue-main-2026-10-03.txt).
 
