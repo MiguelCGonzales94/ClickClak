@@ -66,4 +66,4 @@ Backend: **283 pruebas, 0 fallos** (254 antes). Panel: **68** (55 antes). Ademá
 - **El técnico no elige la sede al marcar.** Es la decisión que evita cambiar la app de campo y la API de marcación; si el cliente necesita lo contrario, es un cambio mayor.
 - **Las asignaciones quitadas no se ven.** No hay pantalla de histórico de bajas; la bitácora conserva quién y cuándo.
 - **La lista no se pagina.** Con muchos técnicos y varias sedes cada uno crecerá; es el mismo límite de siempre de esta pantalla.
-- **No se probó en la VM de Azure.**
+- **Desplegado en la VM el 9-oct-2026** (`dc1d0ff`, con respaldo previo y 73/73); el recorrido manual de la pantalla contra producción sigue pendiente (CP-X07). Ver [resultados-de-pruebas.md](resultados-de-pruebas.md), 9.9.1.
