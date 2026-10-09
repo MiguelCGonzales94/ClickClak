@@ -121,6 +121,46 @@ export interface SolicitudRegistrarProyecto {
   fechaFin?: string | null;
 }
 
+export type EstadoValidacion = "VALIDO" | "OBSERVADO" | "FUERA_DE_TOLERANCIA" | "SOSPECHOSO" | "SIN_ASIGNACION";
+
+export type TipoEvento = "ENTRADA" | "INICIO_REFRIGERIO" | "FIN_REFRIGERIO" | "SALIDA";
+
+/** Una marcación vista por supervisión (`GET /api/marcaciones`). Proyecto y sede son nulos si quedó SIN_ASIGNACION. */
+export interface RespuestaAsistencia {
+  id: number;
+  usuarioId: number;
+  nombreUsuario: string;
+  tipoEvento: TipoEvento;
+  horaEvento: string;
+  horaSincronizacion: string;
+  retrasoSincronizacionSegundos: number;
+  estadoValidacion: EstadoValidacion;
+  distanciaMetros: number | null;
+  precisionMetros: number | null;
+  latitud: number | null;
+  longitud: number | null;
+  proyecto: string | null;
+  ubicacion: string | null;
+  radioToleranciaMetros: number | null;
+  dispositivo: string | null;
+}
+
+export interface RespuestaResumenAsistencia {
+  total: number;
+  porEstado: Record<EstadoValidacion, number>;
+}
+
+export interface FiltrosAsistencia {
+  usuarioId: string;
+  ubicacionId: string;
+  desde: string;
+  hasta: string;
+  estado: EstadoValidacion | "";
+  tipoEvento: TipoEvento | "";
+  pagina: number;
+  tamano: number;
+}
+
 export interface RespuestaUbicacion {
   id: number;
   proyectoId: number;

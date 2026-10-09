@@ -8,6 +8,7 @@ const ENLACES_NAV: { a: string; etiqueta: string; icono: NombreIcono; fin?: bool
   { a: "/", etiqueta: "Dashboard", icono: "dashboard", fin: true },
   // La gestión de usuarios (alta, claves, bajas) es exclusiva de RRHH_ADMIN en el servidor.
   { a: "/usuarios", etiqueta: "Usuarios", icono: "usuarios", soloRol: "RRHH_ADMIN" },
+  { a: "/asistencia", etiqueta: "Asistencia", icono: "agenda" },
   { a: "/sedes", etiqueta: "Sedes y servicios", icono: "edificio" },
   { a: "/turnos", etiqueta: "Turnos", icono: "turnos" },
   { a: "/asignaciones", etiqueta: "Asignaciones", icono: "asignaciones" },
