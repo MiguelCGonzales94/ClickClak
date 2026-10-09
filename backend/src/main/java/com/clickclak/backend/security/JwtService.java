@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.util.UUID;
 
 import javax.crypto.SecretKey;
 
@@ -38,6 +39,9 @@ public class JwtService {
     public String generarToken(Usuario usuario) {
         Instant ahora = Instant.now();
         return Jwts.builder()
+                // jti único: dos tokens del mismo usuario emitidos en el mismo segundo serían idénticos, y
+                // revocar el primero (cierre de sesión, cambio de clave) dejaría inservible también el segundo.
+                .id(UUID.randomUUID().toString())
                 .subject(usuario.getId().toString())
                 .claim("rol", usuario.getRol().getNombre())
                 .claim("correo", usuario.getCorreo())

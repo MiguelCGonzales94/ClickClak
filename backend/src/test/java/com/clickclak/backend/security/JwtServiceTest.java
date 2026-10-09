@@ -32,6 +32,15 @@ class JwtServiceTest {
     }
 
     @Test
+    void dosTokensDelMismoUsuarioEnElMismoInstante_sonDistintos() {
+        Usuario usuario = Usuario.builder().id(7L)
+                .rol(Rol.builder().nombre(Rol.SUPERVISOR).build()).build();
+
+        // Sin jti salían idénticos dentro del mismo segundo: revocar uno revocaba el otro.
+        assertThat(jwtService.generarToken(usuario)).isNotEqualTo(jwtService.generarToken(usuario));
+    }
+
+    @Test
     void unTokenFirmadoConOtraClave_esRechazado() {
         Usuario usuario = Usuario.builder().id(1L)
                 .rol(Rol.builder().nombre(Rol.COLABORADOR).build()).build();

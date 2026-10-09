@@ -114,4 +114,17 @@ class RecuperacionClaveServiceTest {
         assertThat(supervisor.getPasswordHash()).isEqualTo("hash-nuevo");
         assertThat(almacenTokens.consumir(token)).isEmpty();
     }
+
+    @Test
+    void restablecer_conClaveTemporalPendiente_laMarcaDejaDeAplicar() {
+        Usuario supervisor = Usuario.builder().id(1L).correo("ana@example.com").activo(true).debeCambiarClave(true)
+                .rol(Rol.builder().nombre(Rol.SUPERVISOR).build()).build();
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(supervisor));
+        when(passwordEncoder.encode("claveNueva123")).thenReturn("hash-nuevo");
+        String token = almacenTokens.generar(1L);
+
+        servicio.restablecer(new RestablecerClaveRequest(token, "claveNueva123"));
+
+        assertThat(supervisor.isDebeCambiarClave()).isFalse();
+    }
 }

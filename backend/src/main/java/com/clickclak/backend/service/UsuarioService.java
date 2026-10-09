@@ -13,6 +13,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.clickclak.backend.dto.ClaveTemporalResponse;
 import com.clickclak.backend.dto.EditarUsuarioRequest;
 import com.clickclak.backend.dto.HistorialUsuarioResponse;
 import com.clickclak.backend.dto.PaginaResponse;
@@ -31,6 +32,7 @@ import com.clickclak.backend.repository.BitacoraAuditoriaRepository;
 import com.clickclak.backend.repository.RolRepository;
 import com.clickclak.backend.repository.UsuarioRepository;
 import com.clickclak.backend.security.AlmacenIntentosFallidos;
+import com.clickclak.backend.security.GeneradorClaveTemporal;
 import com.clickclak.backend.security.PoliticaContrasenas;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -199,6 +201,39 @@ public class UsuarioService {
             throw new OperacionNoPermitidaException(MENSAJE_CON_HISTORIAL);
         }
         registrarBitacora(actorId, usuarioId, AccionAuditoria.ELIMINACION, estadoAnterior, null);
+    }
+
+    /**
+     * HU04: el administrador asigna una clave temporal a otro usuario. Se devuelve una sola vez y el
+     * usuario queda obligado a cambiarla en su próximo ingreso (el filtro JWT solo le deja llamar al
+     * cambio de clave). Levanta también el bloqueo por intentos fallidos: quien pide una clave nueva
+     * suele estar bloqueado por haber olvidado la anterior.
+     */
+    @Transactional
+    public ClaveTemporalResponse restablecerClave(Long usuarioId, Long actorId) {
+        Usuario usuario = obtenerUsuario(usuarioId);
+        if (usuario.getId().equals(actorId)) {
+            throw new OperacionNoPermitidaException("Para cambiar su propia contraseña use «Cambiar mi contraseña»");
+        }
+        if (Rol.COLABORADOR.equals(usuario.getRol().getNombre())) {
+            throw new SolicitudInvalidaException("Un colaborador no usa contraseña: su acceso es por WebAuthn");
+        }
+        if (!usuario.isActivo()) {
+            throw new OperacionNoPermitidaException("No se puede restablecer la contraseña de un usuario inactivo");
+        }
+
+        String claveTemporal = GeneradorClaveTemporal.generar();
+        boolean estabaPendiente = usuario.isDebeCambiarClave();
+        usuario.setPasswordHash(passwordEncoder.encode(claveTemporal));
+        usuario.setDebeCambiarClave(true);
+        usuarioRepository.save(usuario);
+        almacenIntentosFallidos.limpiar(usuario.getCorreo());
+
+        // La clave nunca entra en la bitácora: solo queda constancia de que se restableció.
+        registrarBitacora(actorId, usuario.getId(), AccionAuditoria.MODIFICACION,
+                Map.of("debeCambiarClave", estabaPendiente),
+                Map.of("debeCambiarClave", true, "clave", "restablecida por el administrador"));
+        return new ClaveTemporalResponse(claveTemporal);
     }
 
     @Transactional(readOnly = true)

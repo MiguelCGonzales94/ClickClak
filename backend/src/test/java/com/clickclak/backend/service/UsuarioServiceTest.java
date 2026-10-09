@@ -24,6 +24,7 @@ import com.clickclak.backend.exception.RecursoNoEncontradoException;
 import com.clickclak.backend.exception.SolicitudInvalidaException;
 import com.clickclak.backend.model.BitacoraAuditoria;
 import com.clickclak.backend.model.EstadoCuenta;
+import com.clickclak.backend.model.EstadoCuenta;
 import com.clickclak.backend.model.Rol;
 import com.clickclak.backend.model.Usuario;
 import com.clickclak.backend.repository.BitacoraAuditoriaRepository;
@@ -505,6 +506,58 @@ class UsuarioServiceTest {
     void buscar_conEstadoDesconocido_lanzaSolicitudInvalida() {
         assertThatThrownBy(() -> usuarioService.buscar(null, null, "SUSPENDIDA", 0, 20))
                 .isInstanceOf(SolicitudInvalidaException.class);
+    }
+
+    @Test
+    void restablecerClave_guardaHashDeLaTemporalMarcaPendienteYNoLaAudita() {
+        Usuario supervisor = Usuario.builder().id(5L).correo("ana@example.com").activo(true)
+                .passwordHash("hash-previo").rol(rolSupervisor).build();
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(supervisor));
+        when(passwordEncoder.encode(any())).thenReturn("hash-temporal");
+        when(usuarioRepository.getReferenceById(1L)).thenReturn(Usuario.builder().id(1L).build());
+
+        var respuesta = usuarioService.restablecerClave(5L, 1L);
+
+        assertThat(respuesta.claveTemporal()).hasSize(12);
+        assertThat(supervisor.getPasswordHash()).isEqualTo("hash-temporal");
+        assertThat(supervisor.isDebeCambiarClave()).isTrue();
+        verify(passwordEncoder).encode(respuesta.claveTemporal());
+        verify(almacenIntentosFallidos).limpiar("ana@example.com");
+        var captor = org.mockito.ArgumentCaptor.forClass(BitacoraAuditoria.class);
+        verify(bitacoraRepository).save(captor.capture());
+        assertThat(captor.getValue().getValoresNuevos()).doesNotContain(respuesta.claveTemporal());
+        assertThat(captor.getValue().getValoresAnteriores()).doesNotContain(respuesta.claveTemporal());
+    }
+
+    @Test
+    void restablecerClave_aColaborador_lanzaSolicitudInvalida() {
+        Usuario colaborador = Usuario.builder().id(5L).activo(true).rol(rolColaborador).build();
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(colaborador));
+
+        assertThatThrownBy(() -> usuarioService.restablecerClave(5L, 1L))
+                .isInstanceOf(SolicitudInvalidaException.class);
+        verify(usuarioRepository, never()).save(any());
+    }
+
+    @Test
+    void restablecerClave_aUsuarioInactivo_lanzaOperacionNoPermitida() {
+        Usuario inactivo = Usuario.builder().id(5L).activo(false).rol(rolSupervisor).build();
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(inactivo));
+
+        assertThatThrownBy(() -> usuarioService.restablecerClave(5L, 1L))
+                .isInstanceOf(OperacionNoPermitidaException.class);
+        verify(usuarioRepository, never()).save(any());
+    }
+
+    @Test
+    void restablecerClave_aSiMismo_lanzaOperacionNoPermitida() {
+        Usuario admin = usuarioExistente(5L, rolAdmin);
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(admin));
+
+        assertThatThrownBy(() -> usuarioService.restablecerClave(5L, 5L))
+                .isInstanceOf(OperacionNoPermitidaException.class)
+                .hasMessageContaining("Cambiar mi contraseña");
+        verify(usuarioRepository, never()).save(any());
     }
 
     private Usuario usuarioExistente(Long id, Rol rol) {

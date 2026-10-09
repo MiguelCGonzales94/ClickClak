@@ -91,7 +91,8 @@ public class AutenticacionService {
         String token = jwtService.generarToken(usuario);
         return new LoginResponse(
                 token, jwtService.getExpiracionMinutos(),
-                usuario.getRol().getNombre(), usuario.getNombres(), usuario.getApellidos());
+                usuario.getRol().getNombre(), usuario.getNombres(), usuario.getApellidos(),
+                usuario.isDebeCambiarClave());
     }
 
     /** Se devuelve el DTO ya ensamblado (no la entidad) por la misma razón que {@link #autenticar}. */
@@ -101,7 +102,7 @@ public class AutenticacionService {
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado: " + usuarioId));
         return new PerfilResponse(
                 usuario.getId(), usuario.getNombres(), usuario.getApellidos(),
-                usuario.getCorreo(), usuario.getRol().getNombre());
+                usuario.getCorreo(), usuario.getRol().getNombre(), usuario.isDebeCambiarClave());
     }
 
     /**
