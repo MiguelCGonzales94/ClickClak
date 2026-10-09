@@ -139,7 +139,8 @@ Script [prueba_e2e_marcacion.py](evidencia/prueba_e2e_marcacion.py). Crea sus pr
 | CP-X02 | OE4 | Cola sin conexión y sincronización diferida en el cliente | Exige service worker, geolocalización y WebAuthn | Prueba en Chrome Android |
 | CP-X04 | OE6, Seguridad | `verificar-usuarios.sh` en la VM: corte de sesión al desactivar, clave temporal y eliminación sin historial | **Ejecutado en la VM el 9-oct-2026: 21/21** tras el PR #27 (20/21 antes, por el defecto D-04) | Resultado en [resultados-de-pruebas.md](resultados-de-pruebas.md), 9.7 |
 | CP-X05 | OE6 | Recorrido manual de la pantalla de asistencia contra producción | Solo se probó por HTTP en la VM (73/73 y los endpoints del módulo) | Abrir `/asistencia` en el panel de producción con un administrador |
-| CP-X06 | OE6 | Despliegue del módulo de asignaciones en la VM: migración V4 y endpoints nuevos | Aún no desplegado | Tras fusionar; respaldo de la base antes de aplicar V4 |
+| CP-X06 | OE6 | Despliegue del módulo de asignaciones en la VM: migración V4 y endpoints nuevos | **Ejecutado el 9-oct-2026:** V4 aplicada, 73/73 y los endpoints responden | Resultado en [resultados-de-pruebas.md](resultados-de-pruebas.md), 9.9.1 |
+| CP-X07 | OE6 | Recorrido manual de la pantalla de asignaciones contra producción (crear, mover, quitar, varias sedes) | En producción solo se probó por HTTP y con la regla de la base | Abrir `/asignaciones` en el panel de producción con un administrador |
 
 **Resultado probado (3-oct-2026).** CP-X03 dejó de estar pendiente: se desplegó el commit `8ae83d1` de `main` y `verificar-despliegue.sh` terminó con **52/52 comprobaciones correctas**. Véase [`evidencia/despliegue-main-2026-10-03.txt`](evidencia/despliegue-main-2026-10-03.txt).
 
