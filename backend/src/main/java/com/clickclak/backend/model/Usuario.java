@@ -52,6 +52,14 @@ public class Usuario {
     @Builder.Default
     private boolean activo = true;
 
+    /** Verdadero tras un restablecimiento por el administrador: solo puede cambiar su clave. */
+    @Builder.Default
+    private boolean debeCambiarClave = false;
+
+    private Instant desactivadoEn;
+
+    private String motivoBaja;
+
     @CreationTimestamp
     @Column(updatable = false)
     private Instant creadoEn;

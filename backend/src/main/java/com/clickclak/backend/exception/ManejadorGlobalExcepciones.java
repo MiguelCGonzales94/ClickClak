@@ -62,6 +62,11 @@ public class ManejadorGlobalExcepciones extends ResponseEntityExceptionHandler {
         return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
     }
 
+    @ExceptionHandler(OperacionNoPermitidaException.class)
+    public ResponseEntity<Map<String, String>> operacionNoPermitida(OperacionNoPermitidaException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler(ConflictoAsignacionException.class)
     public ResponseEntity<Map<String, String>> conflictoAsignacion(ConflictoAsignacionException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));

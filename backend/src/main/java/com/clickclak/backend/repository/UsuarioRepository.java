@@ -10,7 +10,15 @@ import org.springframework.data.repository.query.Param;
 import com.clickclak.backend.model.Usuario;
 
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
-    Optional<Usuario> findByCorreo(String correo);
+    /** Sin distinguir mayúsculas, igual que el índice único {@code uk_usuario_correo_minusculas} (V3). */
+    @Query("SELECT u FROM Usuario u WHERE lower(u.correo) = lower(:correo)")
+    Optional<Usuario> findByCorreo(@Param("correo") String correo);
+
+    /** Para el filtro JWT: trae el rol en la misma consulta porque la asociación es perezosa. */
+    @Query("SELECT u FROM Usuario u JOIN FETCH u.rol WHERE u.id = :id")
+    Optional<Usuario> findConRolById(@Param("id") Long id);
+
+    long countByRolNombreAndActivoTrue(String nombreRol);
 
     boolean existsByTipoDocumentoAndNumeroDocumento(String tipoDocumento, String numeroDocumento);
 

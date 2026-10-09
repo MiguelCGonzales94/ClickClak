@@ -1,5 +1,6 @@
 package com.clickclak.backend.repository;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -46,6 +47,28 @@ class RestriccionesBaseDatosTest {
         horarioId = jdbc.queryForObject(
                 "INSERT INTO horario (nombre, hora_inicio, hora_fin) VALUES ('Jornada', '08:00', '17:00') RETURNING id",
                 Long.class);
+    }
+
+    @Test
+    void rechazaCorreosQueSoloDifierenEnMayusculas() {
+        Long rolId = jdbc.queryForObject("SELECT id FROM rol WHERE nombre = 'COLABORADOR'", Long.class);
+
+        assertThatThrownBy(() -> jdbc.update(
+                "INSERT INTO usuario (nombres, apellidos, tipo_documento, numero_documento, correo, rol_id) "
+                        + "VALUES ('Otro', 'Usuario', 'DNI', '99999992', 'RESTRICCIONES@prueba.local', ?)", rolId))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("uk_usuario_correo_minusculas");
+    }
+
+    @Test
+    void usuarioNuevoNaceSinClavePendienteNiBaja() {
+        Boolean debeCambiar = jdbc.queryForObject(
+                "SELECT debe_cambiar_clave FROM usuario WHERE id = ?", Boolean.class, usuarioId);
+        Object desactivadoEn = jdbc.queryForObject(
+                "SELECT desactivado_en FROM usuario WHERE id = ?", Object.class, usuarioId);
+
+        assertThat(debeCambiar).isFalse();
+        assertThat(desactivadoEn).isNull();
     }
 
     @Test

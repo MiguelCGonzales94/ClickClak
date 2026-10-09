@@ -37,6 +37,14 @@ public class ManejadorErroresAutenticacion implements AuthenticationEntryPoint, 
         escribirError(response, HttpServletResponse.SC_FORBIDDEN, "No tiene permisos para esta operación");
     }
 
+    /** HU04: el usuario entró con una clave temporal y debe cambiarla antes de usar el resto de la API. */
+    public void clavePendiente(HttpServletResponse response) throws IOException {
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.getWriter().write(objectMapper.writeValueAsString(
+                Map.of("error", "Debe cambiar su contraseña temporal antes de continuar", "codigo", "CLAVE_PENDIENTE")));
+    }
+
     private void escribirError(HttpServletResponse response, int status, String mensaje) throws IOException {
         response.setStatus(status);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
