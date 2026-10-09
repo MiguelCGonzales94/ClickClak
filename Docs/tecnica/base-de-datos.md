@@ -1,6 +1,6 @@
 # Base de datos — modelo lógico, físico y diccionario de datos
 
-> Cap. V 5.2 del informe (APF2) · Anexo B. Documento generado a partir del esquema real aplicado por Flyway (`V1__esquema_inicial.sql`, `V2__restricciones_e_indices.sql` y `V3__usuarios_estado_cuenta.sql`), por lo que coincide con lo implementado. Si cambia el esquema, hay que regenerarlo.
+> Cap. V 5.2 del informe (APF2) · Anexo B. Documento generado a partir del esquema real aplicado por Flyway (`V1__esquema_inicial.sql`, `V2__restricciones_e_indices.sql`, `V3__usuarios_estado_cuenta.sql` y `V4__asignaciones_varias_sedes.sql`), por lo que coincide con lo implementado. Si cambia el esquema, hay que regenerarlo.
 
 **Motor:** PostgreSQL 16 con PostGIS 3.4 · **Migraciones:** Flyway (`backend/src/main/resources/db/migration`) · **Tablas:** 12 · **Relaciones:** 18.
 
@@ -445,7 +445,7 @@ Persona que usa el sistema. Solo SUPERVISOR y RRHH_ADMIN tienen contraseña; el 
 | `creado_en` | `timestamp with time zone` | No | `now()` |  | Fecha y hora de alta. |
 | `actualizado_en` | `timestamp with time zone` | No | `now()` |  | Fecha y hora de la última modificación. |
 
-## 5. Restricciones de integridad (migración V2)
+## 5. Restricciones de integridad (migraciones V2 y V4)
 
 Son la última línea de defensa: actúan aunque falle un servicio o alguien escriba directo en la base. Cada una tiene su prueba en `RestriccionesBaseDatosTest`.
 
@@ -464,7 +464,7 @@ Son la última línea de defensa: actúan aunque falle un servicio o alguien esc
 | `horario` | `ck_horario_tolerancia` | La tolerancia no es negativa. |
 | `horario` | `ck_horario_refrigerio` | El refrigerio se define completo o no se define, y cae dentro de la jornada. |
 | `asignacion` | `ck_asignacion_fechas` | `fecha_fin` no puede ser anterior a `fecha_inicio`. |
-| `asignacion` | `ex_asignacion_sin_solapamiento` | Un colaborador no puede tener dos asignaciones activas con fechas solapadas (rango inclusivo; sin `fecha_fin` = sin fin). Usa `btree_gist`. |
+| `asignacion` | `ex_asignacion_misma_sede_sin_solapamiento` (V4) | Un colaborador no puede tener la **misma sede** dos veces entre las asignaciones activas con fechas solapadas (rango inclusivo; sin `fecha_fin` = sin fin). Sedes distintas sí pueden coexistir. Usa `btree_gist`. Reemplaza a `ex_asignacion_sin_solapamiento` de V2, que prohibía cualquier solapamiento por colaborador. |
 | `dispositivo` | `ck_dispositivo_contador` | El contador de firmas no es negativo. |
 
 ## 6. Índices
@@ -513,7 +513,7 @@ Etiquetas: **Decisión** = adoptada y reflejada en el esquema · **Supuesto** = 
 # 1. Base de datos local (PostGIS en el puerto 5434 del host)
 docker compose -f infra/docker-compose.yml up -d postgres
 
-# 2. Flyway aplica V1, V2 y V3 al arrancar el backend (y la semilla, en perfil dev)
+# 2. Flyway aplica V1, V2, V3 y V4 al arrancar el backend (y la semilla, en perfil dev)
 cd backend && ./mvnw spring-boot:run
 
 # 3. Pruebas, incluidas las de restricciones contra el Postgres real

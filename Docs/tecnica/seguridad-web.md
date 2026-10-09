@@ -38,7 +38,7 @@ Activos a proteger, en orden de importancia: los datos de asistencia y ubicació
 | C16 | **CORS restringido por entorno**: en producción ningún origen externo; el backend reconoce el esquema, host y puerto públicos reenviados por el proxy | Backend y proxy | `SeguridadWebTest.corsAutorizaElOrigenConfigurado…`; verificación del login desde el origen real de 8443 |
 | C17 | **Hora del evento no futura** en las marcaciones (tolerancia de 5 minutos) | Backend | `SeguridadWebTest.laMarcacionRechazaUnEventoDelFuturo` |
 | C18 | **Auditoría**: historial de cada cambio de estado de una incidencia y bitácora con valores anteriores y nuevos | Backend | `IncidenciaControllerTest.flujoCompleto_dejaHistorialYAuditoriaDeCadaPaso` |
-| C19 | **Restricciones de integridad en la base**: dominios cerrados, fechas y horarios coherentes, asignaciones sin solapamiento | Base de datos | `RestriccionesBaseDatosTest` (8) |
+| C19 | **Restricciones de integridad en la base**: dominios cerrados, fechas y horarios coherentes, la misma sede no se asigna dos veces con fechas solapadas | Base de datos | `RestriccionesBaseDatosTest` (8) |
 | C20 | **Secretos fuera del repositorio**: se generan en la VM con `openssl` y viven en un archivo con permisos 600; sin cuenta de desarrollo en producción | Infra | `despliegue-azure.md`; migraciones sin la semilla `dev` |
 | C21 | **Acceso a la VM solo por llave SSH** (contraseña desactivada) y `fail2ban` | Infra | `sshd -T`: `passwordauthentication no` |
 | C22 | **Cifrado en reposo del disco** con clave de la plataforma | Infra | `az disk`: `EncryptionAtRestWithPlatformKey` |

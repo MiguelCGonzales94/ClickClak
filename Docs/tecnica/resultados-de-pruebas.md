@@ -249,3 +249,22 @@ Cierra el hallazgo H-09. PR #29 (backend) y #30 (panel), fusionados y desplegado
 - **CP-X05, pendiente:** no se hizo el recorrido manual de la pantalla de asistencia contra producción; en la VM solo se comprobó por HTTP.
 - No se midió el rendimiento con un volumen alto de marcaciones: la consulta trae las asociaciones en una sola consulta, pero solo se probó con unas pocas filas (hasta 11).
 - Siguen fuera, y declarados en [modulo-asistencia.md](modulo-asistencia.md): exportar a CSV, que el colaborador vea sus marcaciones, un mapa integrado y limitar a cada supervisor a su personal.
+
+
+### 9.9 Asignaciones con varias sedes (9-oct-2026)
+
+Descripción, decisiones y límites en [modulo-asignaciones.md](modulo-asignaciones.md). **No se desplegó ni se probó en la VM.**
+
+| Prueba | Resultado |
+|---|---|
+| Backend | **283 pruebas, 0 fallos** (254 antes): 15 nuevas en `AsignacionServiceTest`, 8 de integración en `AsignacionControllerTest` contra la base real, 4 en `MarcacionServiceTest` y 2 en `RestriccionesBaseDatosTest` |
+| Panel | **68 pruebas Vitest** (55 antes; 13 nuevas en `asignaciones/reglas.test.ts`); `tsc` y build correctos |
+| App de campo | Build correcto (no tiene pruebas automatizadas, ver H-01) |
+| Migración V4 | Aplicada sobre la base local; las restricciones se probaron con la base real |
+| Recorrido manual local (CP-M07) | Correcto: un técnico con dos sedes a la vez aparece con «2 sedes vigentes»; repetir una sede con fechas cruzadas se rechaza con el nombre del técnico y de la sede; editar sin cambios avisa; el traslado explica lo que hará, no ofrece la sede actual y detecta el conflicto con otra sede ya asignada; al quitar una sede desaparece de la lista; al mover, la anterior pasa a *Finalizada* y la nueva queda *Vigente*; los filtros por estado separan lo vigente de lo finalizado. Los datos de prueba se borraron |
+
+**Hallazgo corregido de paso.** Una asignación ya terminada se mostraba como *Vigente* en el panel y el tablero la contaba como vigente. Se nota ahora porque por primera vez se pueden terminar. Antes de este cambio, además, crear una asignación no dejaba rastro en la bitácora.
+
+**Brechas**
+- **CP-X06, pendiente:** desplegar en la VM y comprobar la migración V4 y los endpoints nuevos. Antes de aplicar V4 conviene un respaldo de la base.
+- La regla de validar contra la sede más cercana no detecta que una persona con dos turnos cruzados debía estar en la otra sede (límite declarado en `modulo-asignaciones.md`).
