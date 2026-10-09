@@ -4,7 +4,7 @@ Ejecución local del [plan de validación](plan-de-pruebas.md) el 3-oct-2026 (CL
 
 Las etiquetas siguen la convención del proyecto: **Requerimiento**, **Supuesto**, **Recomendación**, **Decisión**.
 
-> **Actualización del 8-oct-2026.** El módulo de usuarios (HU04) se amplió después de este corte: la sección 9 recoge sus resultados (backend 244 pruebas, panel 40 pruebas, 21 comprobaciones del script de usuarios en local y un recorrido manual por el panel). Las cifras de las secciones 1 a 8 son las del 3-oct y no se modificaron.
+> **Actualización del 8-oct-2026.** El módulo de usuarios (HU04) se amplió después de este corte: la sección 9 recoge sus resultados (backend 244 pruebas, panel 40 pruebas, 21 comprobaciones del script de usuarios en local y un recorrido manual por el panel). Las cifras de las secciones 1 a 8 son las del 3-oct y no se modificaron. El despliegue y la verificación en la VM del 9-oct-2026 están en 9.7.
 
 > **Qué se probó y qué no.** El primer corte se ejecutó en local sobre un simulacro de la fusión de los 13 PR abiertos (commit `6a1fb44` de un worktree local, no subido). Después de fusionar, la suite completa del backend se repitió sobre `main` (`8ae83d1`) con JDK 21 y el despliegue de Azure se verificó con 52/52 comprobaciones correctas. WebAuthn real y la cola sin conexión del service worker **no se probaron** y siguen en la sección 5. No se hicieron pruebas de carga (decisión del 3-oct).
 
@@ -134,7 +134,7 @@ Conviene repetir todo **tras fusionar los PR en `main`** y, una vez desplegado, 
 
 ## 9. Actualización: módulo de usuarios (8-oct-2026)
 
-Ejecución local del módulo de usuarios ampliado (HU04), en cinco pull requests apilados (#22 a #25 y el de documentación). Las pruebas del backend y del panel corrieron sobre la rama de cada fase; el recorrido manual y el script de verificación, contra el backend en perfil `dev` y la base local. **No se probó en la VM de Azure.**
+Ejecución local del módulo de usuarios ampliado (HU04), en cinco pull requests apilados (#22 a #25 y el de documentación). Las pruebas del backend y del panel corrieron sobre la rama de cada fase; el recorrido manual y el script de verificación, contra el backend en perfil `dev` y la base local. La verificación en la VM de Azure del 9-oct-2026 está en 9.7.
 
 ### 9.1 Resumen
 
@@ -144,6 +144,7 @@ Ejecución local del módulo de usuarios ampliado (HU04), en cinco pull requests
 | `frontend-admin`: pruebas Vitest | 17 | **40** | Correcto; `tsc` y build de producción correctos |
 | `verificar-usuarios.sh` (local) | no existía | **21 comprobaciones** | 21 correctas |
 | Recorrido manual del panel (CP-M05) | no existía | 11 casos | Correcto (ver 9.4) |
+| `verificar-despliegue.sh` en la VM (9-oct) | 52 comprobaciones (3-oct) | **73 comprobaciones** | 73 correctas, 0 fallos (ver 9.7) |
 
 ### 9.2 Pruebas nuevas del backend (66)
 
@@ -193,10 +194,34 @@ Los datos de prueba se borraron de la base local. **No se guardaron capturas** e
 | D-03 | Baja | `verificar-usuarios.sh` enviaba un motivo con tilde y el servidor respondía 400 en una consola que no usa UTF-8 | Corregido: el motivo del script es ASCII |
 | H-06 | Hallazgo | Con una sesión guardada que ya no sirve (token de otra ejecución o revocado), el tablero lanza sus peticiones y deja errores 401 "Uncaught (in promise)" en la consola en vez de volver al login | Abierto; es del tablero, anterior a este trabajo |
 | H-07 | Hallazgo | `npm run lint` del panel no funciona: `eslint` no está instalado | Abierto; anterior a este trabajo |
+| D-04 | Baja | Los 401 y 403 del filtro de seguridad se escribían sin fijar la codificación y salían en ISO-8859-1: la "ñ" de "contraseña" y la "ó" de "operación" llegaban como un byte que no es UTF-8 válido. Lo detectó `verificar-usuarios.sh` en la VM (20/21) | Corregido: PR #27, con una prueba que falla sin el arreglo; la VM quedó en 21/21 |
+| H-08 | Hallazgo | Al comparar la VM con el paquete de `main` antes de desplegar se vio que la VM corría los cambios del PR #21 (Let's Encrypt y la corrección del login en :8443) que `main` no tenía. Desplegar `main` tal cual habría devuelto el 403 al login del panel | Resuelto: se fusionó #21 antes de desplegar. Queda como regla: comparar siempre con `diff` antes de pisar la VM |
+| H-09 | Hallazgo funcional | **No existe consulta de marcaciones.** El backend solo expone `POST /api/marcaciones` (registrar); no hay un endpoint para listarlas ni una pantalla en el panel. Hoy el supervisor solo ve el efecto de una marcación a través de las incidencias de tardanza | Abierto: es una funcionalidad por construir, no un defecto de este módulo |
 
 ### 9.6 Brechas
 
-- **No se ejecutó en la VM.** `verificar-usuarios.sh` y la migración V3 sobre la base de producción están pendientes. Antes de aplicar V3 hay que comprobar que no hay correos duplicados salvo por mayúsculas: `SELECT lower(correo), count(*) FROM usuario GROUP BY 1 HAVING count(*) > 1;`.
+- **La VM ya se verificó (9-oct-2026), ver 9.7.** Antes de aplicar V3 se comprobó que no había correos duplicados salvo por mayúsculas.
+- **Sin pantalla ni consulta de marcaciones** (H-09): las marcaciones de los colaboradores no se pueden revisar desde el panel administrativo.
 - **El estado `BLOQUEADA` sale de un almacén en memoria:** se pierde al reiniciar el backend (límite ya declarado).
 - La vista en un teléfono del panel de usuarios no se probó: el panel es de escritorio.
 - El cambio de contraseña obligatorio no está en `verificar-usuarios.sh` (cambiar la clave dejaría historial y el usuario temporal ya no podría eliminarse); lo cubren `ClavesUsuarioControllerTest` y el recorrido manual.
+
+### 9.7 Verificación en la VM de Azure (9-oct-2026)
+
+El módulo se fusionó en `main` y se desplegó en la VM `vm-clickclak` el 9-oct-2026, en dos pasos: `b5e429f` (PR #21 a #26) y `a35f19e` (PR #27, que corrige el defecto D-04). La salida completa del segundo está en [`evidencia/despliegue-main-2026-10-09.txt`](evidencia/despliegue-main-2026-10-09.txt).
+
+| Prueba | Resultado |
+|---|---|
+| Orden de las fusiones | #22, #23, #24, #25 (cada uno reapuntado a `main` y fusionado con merge commit), #21, #26 y #27. El CI de cada PR pasó antes de fusionarlo |
+| Antes de desplegar | Respaldo de la base con `pg_dump` (13 tablas, 44 KB) y consulta de correos duplicados salvo por mayúsculas: **ninguno** |
+| Paquete | `git archive` de `main`; el SHA-256 calculado en el equipo coincide con el de la VM en ambos despliegues |
+| Comparación previa | `diff` entre lo que corría en la VM y el paquete, antes de pisar nada: detectó que `main` aún no tenía los cambios de #21 (ver 9.5, H-08). Tras el segundo despliegue solo difirieron los dos archivos del PR #27 |
+| Migraciones | Flyway en la **versión 3** (`usuarios estado cuenta`, exitosa); existen `debe_cambiar_clave`, `desactivado_en`, `motivo_baja` y el índice `uk_usuario_correo_minusculas`; los 5 usuarios existentes quedaron intactos |
+| `verificar-despliegue.sh` en `a35f19e` | **73 comprobaciones correctas, 0 fallos** (antes 52): 6 de contenedores, 6 del proxy, 6 del acceso real, 22 de seguridad web, 21 de gestión de usuarios y 12 de replicación; la del proxy incluye la del login en :8443 que agregó #21 |
+| `verificar-usuarios.sh` en la VM | **21/21** tras el PR #27. En `b5e429f` dio 20/21: fallaba la lectura del código `CLAVE_PENDIENTE` por el defecto D-04 |
+| Desde fuera de la VM | La app de campo (443) y el panel (8443) responden 200; la API sin token responde 401 |
+| CI de `main` | Backend en verde en `a35f19e` |
+
+**Lo que no prueba.** Es una verificación automática por HTTP. No se repitió el recorrido manual del panel (CP-M05) contra producción, y siguen pendientes WebAuthn con un autenticador real y la cola sin conexión (CP-X01 y CP-X02). Cada ejecución del script deja cuatro entradas de auditoría de un usuario ya borrado (alta, restablecimiento, baja y eliminación): es el rastro esperado.
+
+**Respaldos en la VM.** `~/respaldos/clickclak-antes-de-b5e429f.sql` (base antes de la V3) y los directorios `~/clickclak-prev-before-b5e429f` y `~/clickclak-prev-before-a35f19e` con el código anterior de cada despliegue.

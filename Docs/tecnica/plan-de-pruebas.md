@@ -131,7 +131,7 @@ Script [prueba_e2e_marcacion.py](evidencia/prueba_e2e_marcacion.py). Crea sus pr
 |---|---|---|---|---|
 | CP-X01 | OE2 | Inicio de sesión con WebAuthn y biometría real | Exige un autenticador | Prueba en un dispositivo Android |
 | CP-X02 | OE4 | Cola sin conexión y sincronización diferida en el cliente | Exige service worker, geolocalización y WebAuthn | Prueba en Chrome Android |
-| CP-X04 | OE6, Seguridad | `verificar-usuarios.sh` en la VM: corte de sesión al desactivar, clave temporal y eliminación sin historial | Probado solo en local (21 comprobaciones); falta ejecutarlo en la VM | Tras desplegar la rama de usuarios |
+| CP-X04 | OE6, Seguridad | `verificar-usuarios.sh` en la VM: corte de sesión al desactivar, clave temporal y eliminación sin historial | **Ejecutado en la VM el 9-oct-2026: 21/21** tras el PR #27 (20/21 antes, por el defecto D-04) | Resultado en [resultados-de-pruebas.md](resultados-de-pruebas.md), 9.7 |
 
 **Resultado probado (3-oct-2026).** CP-X03 dejó de estar pendiente: se desplegó el commit `8ae83d1` de `main` y `verificar-despliegue.sh` terminó con **52/52 comprobaciones correctas**. Véase [`evidencia/despliegue-main-2026-10-03.txt`](evidencia/despliegue-main-2026-10-03.txt).
 
