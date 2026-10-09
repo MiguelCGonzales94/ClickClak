@@ -5,6 +5,7 @@ public record PerfilResponse(
     String nombres,
     String apellidos,
     String correo,
-    String rol
+    String rol,
+    boolean debeCambiarClave
 ) {
 }

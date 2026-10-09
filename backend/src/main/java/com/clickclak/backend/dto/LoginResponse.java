@@ -5,6 +5,7 @@ public record LoginResponse(
     long expiraEnMinutos,
     String rol,
     String nombres,
-    String apellidos
+    String apellidos,
+    boolean debeCambiarClave
 ) {
 }

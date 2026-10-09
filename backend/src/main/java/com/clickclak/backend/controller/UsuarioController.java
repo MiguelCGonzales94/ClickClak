@@ -2,6 +2,7 @@ package com.clickclak.backend.controller;
 
 import java.util.List;
 
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.clickclak.backend.dto.ClaveTemporalResponse;
 import com.clickclak.backend.dto.DesactivarUsuarioRequest;
 import com.clickclak.backend.dto.EditarUsuarioRequest;
 import com.clickclak.backend.dto.HistorialUsuarioResponse;
@@ -79,6 +81,15 @@ public class UsuarioController {
     @PreAuthorize("hasRole('RRHH_ADMIN')")
     public UsuarioResponse desbloquear(@PathVariable Long id, Authentication authentication) {
         return usuarioService.desbloquear(id, idAutenticado(authentication));
+    }
+
+    /** La clave temporal viaja una sola vez en la respuesta: por eso {@code no-store}, para que nada la guarde en caché. */
+    @PostMapping("/{id}/restablecer-clave")
+    @PreAuthorize("hasRole('RRHH_ADMIN')")
+    public ResponseEntity<ClaveTemporalResponse> restablecerClave(@PathVariable Long id, Authentication authentication) {
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(usuarioService.restablecerClave(id, idAutenticado(authentication)));
     }
 
     /** 204 si se borró; 409 si el usuario tiene historial (la salida es desactivarlo). */

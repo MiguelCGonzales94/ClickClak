@@ -71,6 +71,8 @@ public class RecuperacionClaveService {
 
         PoliticaContrasenas.validar(solicitud.nuevaPassword());
         usuario.setPasswordHash(passwordEncoder.encode(solicitud.nuevaPassword()));
+        // Eligió su propia clave: ya no hay clave temporal pendiente de cambio (HU04).
+        usuario.setDebeCambiarClave(false);
         usuarioRepository.save(usuario);
 
         return new MensajeResponse("Contraseña actualizada correctamente. Ya puedes iniciar sesión.");

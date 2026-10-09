@@ -188,7 +188,7 @@ public class WebAuthnService {
         String token = jwtService.generarToken(usuario);
         return new LoginResponse(
                 token, jwtService.getExpiracionMinutos(),
-                usuario.getRol().getNombre(), usuario.getNombres(), usuario.getApellidos());
+                usuario.getRol().getNombre(), usuario.getNombres(), usuario.getApellidos(), false);
     }
 
     private static String serializar(PublicKeyCredentialCreationOptions opciones) {
