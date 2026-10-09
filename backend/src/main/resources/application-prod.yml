@@ -4,6 +4,12 @@ spring:
     username: ${DB_USER}
     password: ${DB_PASSWORD}
 
+# El backend solo recibe tráfico del proxy, que sustituye estos encabezados con los valores
+# públicos reales. Aplicarlos permite que Spring reconozca 443 y 8443 como peticiones del mismo
+# origen en vez de comparar el HTTPS del navegador con el HTTP interno entre contenedores.
+server:
+  forward-headers-strategy: framework
+
 clickclak:
   seguridad:
     jwt:

@@ -73,9 +73,9 @@ Los casos CP-M01 a CP-M03 se ejecutaron antes de este plan y **no se repitieron 
 
 | Caso | Resultado | Cuándo y dónde |
 |---|---|---|
-| CP-X03 `verificar-despliegue.sh` | **Correcto: 52/52 comprobaciones** (40 de despliegue y seguridad web; 12 de replicación) | 3-oct-2026, VM `vm-clickclak`, commit `8ae83d1` de `main` |
+| CP-X03 `verificar-despliegue.sh` | **Correcto: 52/52 comprobaciones** (40 de despliegue y seguridad web; 12 de replicación); TLS público válido y HSTS presente | 3-oct-2026, VM `vm-clickclak`, commit `8ae83d1` de `main` |
 
-La salida completa se conserva en [`evidencia/despliegue-main-2026-10-03.txt`](evidencia/despliegue-main-2026-10-03.txt). **No prueba** WebAuthn real ni la cola sin conexión del service worker; ambos casos siguen pendientes en Android.
+Las evidencias se conservan en [`evidencia/despliegue-main-2026-10-03.txt`](evidencia/despliegue-main-2026-10-03.txt) y [`evidencia/letsencrypt-hsts-2026-10-03.txt`](evidencia/letsencrypt-hsts-2026-10-03.txt). **No prueban** WebAuthn real ni la cola sin conexión del service worker; ambos casos siguen pendientes en Android.
 
 ## 5. Casos no ejecutados
 

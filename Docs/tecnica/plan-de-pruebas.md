@@ -44,7 +44,7 @@ Demostrar, con evidencia, que la versión 1 cumple los objetivos específicos de
 | Estado probado | Simulacro local de la fusión en `main` de los 13 PR abiertos, sin subirlo (ver sección 5) |
 
 **Límites del entorno.**
-- El navegador integrado **no registra service workers** ni abre el sitio de la VM por su certificado autofirmado.
+- En la ejecución local original, el navegador integrado **no registró service workers** y el certificado temporal de la VM impidió probarla sin advertencias. Después del despliegue, el 3-oct-2026, las aplicaciones de campo y administración sí cargaron desde la VM en el navegador, sin intersticio ni advertencia, con el certificado público de Let's Encrypt. La evidencia está en [evidencia/letsencrypt-hsts-2026-10-03.txt](evidencia/letsencrypt-hsts-2026-10-03.txt).
 - El inicio de sesión de la app de campo usa WebAuthn y exige un autenticador: **no se puede ejercitar en el navegador integrado**.
 - Las pruebas del backend usan la base de desarrollo, no una base aparte. Las que escriben datos limpian lo suyo o se revierten.
 - El JDK de las pruebas (23) no es el de la imagen de producción: **no se verificó** con el JDK 21.
