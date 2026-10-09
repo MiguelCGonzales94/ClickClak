@@ -95,6 +95,29 @@ class SesionUsuarioControllerTest {
                 .andExpect(status().isNoContent());
     }
 
+    @Test
+    void losMensajesDe401y403LlevanLaCodificacionUtf8() throws Exception {
+        Usuario admin = crearUsuario("sesion.utf8@example.com", Rol.RRHH_ADMIN);
+        admin.setDebeCambiarClave(true);
+        usuarioRepository.save(admin);
+
+        // 403 del filtro (clave pendiente): "contraseña" debe viajar como UTF-8, no como ISO-8859-1.
+        var pendiente = mockMvc.perform(get("/api/usuarios").header("Authorization", bearer(admin)))
+                .andExpect(status().isForbidden())
+                .andReturn().getResponse();
+        org.assertj.core.api.Assertions.assertThat(pendiente.getCharacterEncoding()).isEqualToIgnoringCase("UTF-8");
+        org.assertj.core.api.Assertions.assertThat(new String(pendiente.getContentAsByteArray(), java.nio.charset.StandardCharsets.UTF_8))
+                .contains("contraseña");
+
+        // 403 de autorización por rol: "operación".
+        Usuario supervisor = crearUsuario("sesion.utf8.sup@example.com", Rol.SUPERVISOR);
+        var sinPermiso = mockMvc.perform(post("/api/usuarios/1/activar").header("Authorization", bearer(supervisor)))
+                .andExpect(status().isForbidden())
+                .andReturn().getResponse();
+        org.assertj.core.api.Assertions.assertThat(new String(sinPermiso.getContentAsByteArray(), java.nio.charset.StandardCharsets.UTF_8))
+                .contains("operación");
+    }
+
     private String bearer(Usuario usuario) {
         return "Bearer " + jwtService.generarToken(usuario);
     }
