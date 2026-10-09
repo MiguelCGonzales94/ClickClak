@@ -1,15 +1,21 @@
 package com.clickclak.backend.service;
 
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.clickclak.backend.dto.EditarUsuarioRequest;
+import com.clickclak.backend.dto.HistorialUsuarioResponse;
+import com.clickclak.backend.dto.PaginaResponse;
 import com.clickclak.backend.dto.RegistrarUsuarioRequest;
 import com.clickclak.backend.dto.UsuarioResponse;
 import com.clickclak.backend.exception.RecursoDuplicadoException;
@@ -18,40 +24,52 @@ import com.clickclak.backend.exception.RecursoNoEncontradoException;
 import com.clickclak.backend.exception.SolicitudInvalidaException;
 import com.clickclak.backend.model.AccionAuditoria;
 import com.clickclak.backend.model.BitacoraAuditoria;
+import com.clickclak.backend.model.EstadoCuenta;
 import com.clickclak.backend.model.Rol;
 import com.clickclak.backend.model.Usuario;
 import com.clickclak.backend.repository.BitacoraAuditoriaRepository;
 import com.clickclak.backend.repository.RolRepository;
 import com.clickclak.backend.repository.UsuarioRepository;
+import com.clickclak.backend.security.AlmacenIntentosFallidos;
 import com.clickclak.backend.security.PoliticaContrasenas;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * HU04: alta, edición y activación/desactivación de usuarios. Nunca se elimina un usuario
- * (rompería la trazabilidad de marcaciones/incidencias ya registradas a su nombre) — por
- * eso la HU pide "activar y desactivar", no "eliminar". Cada operación queda en
- * {@link BitacoraAuditoria}, tal como exige el criterio de aceptación.
+ * HU04: alta, edición, activación/desactivación y eliminación de usuarios. Eliminar (borrado
+ * físico) solo se permite si el usuario no tiene ningún historial: marcaciones, incidencias,
+ * asignaciones, dispositivos o auditoría quedan a su nombre y borrarlo rompería la trazabilidad.
+ * Con historial, la salida es desactivar. Cada operación queda en {@link BitacoraAuditoria},
+ * tal como exige el criterio de aceptación.
  */
 @Service
 public class UsuarioService {
+
+    static final int TAMANO_MAXIMO_PAGINA = 100;
+    private static final String MENSAJE_CON_HISTORIAL =
+            "El usuario tiene historial (marcaciones, incidencias, asignaciones, dispositivos o auditoría) "
+                    + "y no se puede eliminar: desactívelo en su lugar";
 
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
     private final BitacoraAuditoriaRepository bitacoraRepository;
     private final PasswordEncoder passwordEncoder;
     private final ObjectMapper objectMapper;
+    private final AlmacenIntentosFallidos almacenIntentosFallidos;
 
     public UsuarioService(
             UsuarioRepository usuarioRepository,
             RolRepository rolRepository,
             BitacoraAuditoriaRepository bitacoraRepository,
             PasswordEncoder passwordEncoder,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            AlmacenIntentosFallidos almacenIntentosFallidos) {
         this.usuarioRepository = usuarioRepository;
         this.rolRepository = rolRepository;
         this.bitacoraRepository = bitacoraRepository;
         this.passwordEncoder = passwordEncoder;
         this.objectMapper = objectMapper;
+        this.almacenIntentosFallidos = almacenIntentosFallidos;
     }
 
     @Transactional
@@ -80,7 +98,7 @@ public class UsuarioService {
                 .build());
 
         registrarBitacora(actorId, usuario.getId(), AccionAuditoria.CREACION, null, capturarEstado(usuario));
-        return UsuarioResponse.desde(usuario);
+        return aRespuesta(usuario);
     }
 
     @Transactional
@@ -116,32 +134,121 @@ public class UsuarioService {
         usuarioRepository.save(usuario);
 
         registrarBitacora(actorId, usuario.getId(), AccionAuditoria.MODIFICACION, estadoAnterior, capturarEstado(usuario));
-        return UsuarioResponse.desde(usuario);
+        return aRespuesta(usuario);
     }
 
-    @Transactional
     public UsuarioResponse cambiarEstado(Long usuarioId, boolean activo, Long actorId) {
+        return cambiarEstado(usuarioId, activo, null, actorId);
+    }
+
+    /** {@code motivo} solo aplica a la baja; al reactivar se limpian la fecha y el motivo de la baja anterior. */
+    @Transactional
+    public UsuarioResponse cambiarEstado(Long usuarioId, boolean activo, String motivo, Long actorId) {
         Usuario usuario = obtenerUsuario(usuarioId);
         if (!activo) {
             validarDesactivacion(usuario, actorId);
         }
-        Map<String, Object> estadoAnterior = Map.of("activo", usuario.isActivo());
+        String motivoLimpio = activo || motivo == null || motivo.isBlank() ? null : motivo.trim();
+        Map<String, Object> estadoAnterior = estadoDeBaja(usuario.isActivo(), usuario.getMotivoBaja());
 
         usuario.setActivo(activo);
+        usuario.setDesactivadoEn(activo ? null : Instant.now());
+        usuario.setMotivoBaja(motivoLimpio);
         usuarioRepository.save(usuario);
 
-        registrarBitacora(actorId, usuario.getId(), AccionAuditoria.MODIFICACION, estadoAnterior, Map.of("activo", activo));
-        return UsuarioResponse.desde(usuario);
+        registrarBitacora(actorId, usuario.getId(), AccionAuditoria.MODIFICACION, estadoAnterior,
+                estadoDeBaja(activo, motivoLimpio));
+        return aRespuesta(usuario);
+    }
+
+    /** HU04: levanta el bloqueo por intentos fallidos sin esperar los 15 minutos. */
+    @Transactional
+    public UsuarioResponse desbloquear(Long usuarioId, Long actorId) {
+        Usuario usuario = obtenerUsuario(usuarioId);
+        boolean estabaBloqueado = estaBloqueado(usuario);
+        almacenIntentosFallidos.limpiar(usuario.getCorreo());
+
+        registrarBitacora(actorId, usuario.getId(), AccionAuditoria.MODIFICACION,
+                Map.of("bloqueada", estabaBloqueado), Map.of("bloqueada", false));
+        return aRespuesta(usuario);
+    }
+
+    /**
+     * Borrado físico, solo sin historial. La comprobación explícita da el mensaje claro; la
+     * captura de {@link DataIntegrityViolationException} es la red de seguridad si el esquema
+     * gana una tabla nueva que {@code tieneHistorial} aún no conozca.
+     */
+    @Transactional
+    public void eliminarUsuario(Long usuarioId, Long actorId) {
+        Usuario usuario = obtenerUsuario(usuarioId);
+        if (usuario.getId().equals(actorId)) {
+            throw new OperacionNoPermitidaException("No puede eliminar su propia cuenta");
+        }
+        if (usuario.isActivo() && esUltimoAdministradorActivo(usuario)) {
+            throw new OperacionNoPermitidaException("Debe quedar al menos un administrador activo");
+        }
+        if (usuarioRepository.tieneHistorial(usuarioId)) {
+            throw new OperacionNoPermitidaException(MENSAJE_CON_HISTORIAL);
+        }
+
+        Map<String, Object> estadoAnterior = capturarEstado(usuario);
+        try {
+            usuarioRepository.delete(usuario);
+            usuarioRepository.flush();
+        } catch (DataIntegrityViolationException ex) {
+            throw new OperacionNoPermitidaException(MENSAJE_CON_HISTORIAL);
+        }
+        registrarBitacora(actorId, usuarioId, AccionAuditoria.ELIMINACION, estadoAnterior, null);
     }
 
     @Transactional(readOnly = true)
     public UsuarioResponse obtenerPorId(Long usuarioId) {
-        return UsuarioResponse.desde(obtenerUsuario(usuarioId));
+        return aRespuesta(obtenerUsuario(usuarioId));
     }
 
     @Transactional(readOnly = true)
     public List<UsuarioResponse> listar(String rol, Boolean activo) {
-        return usuarioRepository.buscar(rol, activo).stream().map(UsuarioResponse::desde).toList();
+        Set<String> bloqueados = almacenIntentosFallidos.correosBloqueados();
+        return usuarioRepository.buscar(rol, activo).stream()
+                .map(usuario -> UsuarioResponse.desde(usuario, bloqueados.contains(usuario.getCorreo())))
+                .toList();
+    }
+
+    /** HU04: búsqueda paginada del panel. {@code texto}, {@code rol} y {@code estado} son opcionales. */
+    @Transactional(readOnly = true)
+    public PaginaResponse<UsuarioResponse> buscar(String texto, String rol, String estado, int pagina, int tamano) {
+        if (pagina < 0 || tamano < 1 || tamano > TAMANO_MAXIMO_PAGINA) {
+            throw new SolicitudInvalidaException(
+                    "La página debe ser 0 o mayor y el tamaño debe estar entre 1 y " + TAMANO_MAXIMO_PAGINA);
+        }
+        String estadoNormalizado = estado == null || estado.isBlank() ? null : interpretarEstado(estado).name();
+        String rolNormalizado = rol == null || rol.isBlank() ? null : rol;
+
+        Set<String> bloqueados = almacenIntentosFallidos.correosBloqueados();
+        // Un IN con lista vacía no es portable entre dialectos: el centinela nunca coincide con un correo.
+        List<String> paraConsulta = bloqueados.isEmpty() ? List.of("") : List.copyOf(bloqueados);
+
+        var resultado = usuarioRepository.buscarPagina(
+                patronDeBusqueda(texto), rolNormalizado, estadoNormalizado, paraConsulta, PageRequest.of(pagina, tamano));
+        return PaginaResponse.desde(resultado, usuario -> UsuarioResponse.desde(usuario, bloqueados.contains(usuario.getCorreo())));
+    }
+
+    /** HU04: línea de tiempo del usuario, de la más reciente a la más antigua, tomada de la bitácora. */
+    @Transactional(readOnly = true)
+    public List<HistorialUsuarioResponse> historial(Long usuarioId) {
+        obtenerUsuario(usuarioId);
+        return bitacoraRepository.findByEntidadAndEntidadIdOrderByCreadoEnDescIdDesc("usuario", usuarioId).stream()
+                .map(entrada -> new HistorialUsuarioResponse(
+                        entrada.getId(),
+                        entrada.getAccion(),
+                        entrada.getUsuario() != null ? entrada.getUsuario().getId() : null,
+                        entrada.getUsuario() != null
+                                ? entrada.getUsuario().getNombres() + " " + entrada.getUsuario().getApellidos()
+                                : null,
+                        aJsonNode(entrada.getValoresAnteriores()),
+                        aJsonNode(entrada.getValoresNuevos()),
+                        entrada.getCreadoEn()))
+                .toList();
     }
 
     private Usuario obtenerUsuario(Long usuarioId) {
@@ -218,6 +325,52 @@ public class UsuarioService {
 
     private String normalizarCorreo(String correo) {
         return correo.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private UsuarioResponse aRespuesta(Usuario usuario) {
+        return UsuarioResponse.desde(usuario, estaBloqueado(usuario));
+    }
+
+    private boolean estaBloqueado(Usuario usuario) {
+        return almacenIntentosFallidos.tiempoRestanteDeBloqueo(usuario.getCorreo()).isPresent();
+    }
+
+    private EstadoCuenta interpretarEstado(String estado) {
+        try {
+            return EstadoCuenta.valueOf(estado.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            throw new SolicitudInvalidaException("Estado de cuenta desconocido: " + estado);
+        }
+    }
+
+    /** Texto libre a patrón LIKE en minúsculas; escapa los comodines para que "50%" se busque literal. */
+    private String patronDeBusqueda(String texto) {
+        if (texto == null || texto.isBlank()) {
+            return "%";
+        }
+        String escapado = texto.trim().toLowerCase(Locale.ROOT)
+                .replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+        return "%" + escapado + "%";
+    }
+
+    private Map<String, Object> estadoDeBaja(boolean activo, String motivo) {
+        Map<String, Object> estado = new LinkedHashMap<>();
+        estado.put("activo", activo);
+        if (motivo != null) {
+            estado.put("motivoBaja", motivo);
+        }
+        return estado;
+    }
+
+    private JsonNode aJsonNode(String json) {
+        if (json == null) {
+            return null;
+        }
+        try {
+            return objectMapper.readTree(json);
+        } catch (Exception ex) {
+            throw new IllegalStateException("No se pudo leer el registro de auditoría", ex);
+        }
     }
 
     private Map<String, Object> capturarEstado(Usuario usuario) {

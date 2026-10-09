@@ -6,7 +6,9 @@ import java.time.Instant;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
@@ -58,6 +60,16 @@ public class AlmacenIntentosFallidos {
             return Optional.empty();
         }
         return Optional.of(Duration.between(ahora, registro.bloqueadoHasta()));
+    }
+
+    /** Correos (ya normalizados) con el bloqueo vigente; el panel los usa para mostrar y filtrar el estado de cuenta. */
+    public Set<String> correosBloqueados() {
+        Instant ahora = reloj.instant();
+        return registros.entrySet().stream()
+                .filter(entrada -> entrada.getValue().bloqueadoHasta() != null
+                        && entrada.getValue().bloqueadoHasta().isAfter(ahora))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
     }
 
     public void registrarFallo(String correo) {
