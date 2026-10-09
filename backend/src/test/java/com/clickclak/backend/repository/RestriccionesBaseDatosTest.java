@@ -72,12 +72,35 @@ class RestriccionesBaseDatosTest {
     }
 
     @Test
-    void rechazaAsignacionesSolapadasDelMismoColaborador() {
+    void rechazaLaMismaSedeSolapadaDelMismoColaborador() {
         insertarAsignacion("2026-02-01", "2026-02-28");
 
         assertThatThrownBy(() -> insertarAsignacion("2026-02-28", "2026-03-10"))
                 .isInstanceOf(DataIntegrityViolationException.class)
-                .hasMessageContaining("ex_asignacion_sin_solapamiento");
+                .hasMessageContaining("ex_asignacion_misma_sede_sin_solapamiento");
+    }
+
+    @Test
+    void permiteDosSedesDistintasALaVezParaElMismoColaborador() {
+        Long otraSede = jdbc.queryForObject(
+                "INSERT INTO ubicacion (proyecto_id, nombre, geom) "
+                        + "VALUES (?, 'Otra sede', ST_GeogFromText('POINT(-77.05 -12.05)')) RETURNING id",
+                Long.class, proyectoId);
+        insertarAsignacion("2026-02-01", null);
+
+        assertThatCode(() -> insertarAsignacionEn(otraSede, "2026-02-15", null)).doesNotThrowAnyException();
+        // Y la regla sigue valiendo por sede: repetir cualquiera de las dos en fechas que se cruzan falla.
+        assertThatThrownBy(() -> insertarAsignacionEn(otraSede, "2026-03-01", "2026-03-31"))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("ex_asignacion_misma_sede_sin_solapamiento");
+    }
+
+    @Test
+    void unaAsignacionQuitadaNoImpideAsignarDeNuevoLaMismaSede() {
+        insertarAsignacion("2026-02-01", null);
+        jdbc.update("UPDATE asignacion SET activo = false WHERE usuario_id = ?", usuarioId);
+
+        assertThatCode(() -> insertarAsignacion("2026-02-10", null)).doesNotThrowAnyException();
     }
 
     @Test
@@ -142,10 +165,14 @@ class RestriccionesBaseDatosTest {
     }
 
     private void insertarAsignacion(String fechaInicio, String fechaFin) {
+        insertarAsignacionEn(ubicacionId, fechaInicio, fechaFin);
+    }
+
+    private void insertarAsignacionEn(Long sede, String fechaInicio, String fechaFin) {
         jdbc.update(
                 "INSERT INTO asignacion (usuario_id, proyecto_id, ubicacion_id, horario_id, fecha_inicio, fecha_fin) "
                         + "VALUES (?, ?, ?, ?, ?, ?)",
-                usuarioId, proyectoId, ubicacionId, horarioId,
+                usuarioId, proyectoId, sede, horarioId,
                 LocalDate.parse(fechaInicio), fechaFin == null ? null : LocalDate.parse(fechaFin));
     }
 }
