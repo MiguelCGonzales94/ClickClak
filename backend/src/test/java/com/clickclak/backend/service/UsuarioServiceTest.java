@@ -23,11 +23,13 @@ import com.clickclak.backend.exception.RecursoDuplicadoException;
 import com.clickclak.backend.exception.RecursoNoEncontradoException;
 import com.clickclak.backend.exception.SolicitudInvalidaException;
 import com.clickclak.backend.model.BitacoraAuditoria;
+import com.clickclak.backend.model.EstadoCuenta;
 import com.clickclak.backend.model.Rol;
 import com.clickclak.backend.model.Usuario;
 import com.clickclak.backend.repository.BitacoraAuditoriaRepository;
 import com.clickclak.backend.repository.RolRepository;
 import com.clickclak.backend.repository.UsuarioRepository;
+import com.clickclak.backend.security.AlmacenIntentosFallidos;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,6 +39,7 @@ class UsuarioServiceTest {
     @Mock private RolRepository rolRepository;
     @Mock private BitacoraAuditoriaRepository bitacoraRepository;
     @Mock private PasswordEncoder passwordEncoder;
+    @Mock private AlmacenIntentosFallidos almacenIntentosFallidos;
 
     private UsuarioService usuarioService;
 
@@ -47,7 +50,8 @@ class UsuarioServiceTest {
     @BeforeEach
     void configurar() {
         usuarioService = new UsuarioService(
-                usuarioRepository, rolRepository, bitacoraRepository, passwordEncoder, new ObjectMapper());
+                usuarioRepository, rolRepository, bitacoraRepository, passwordEncoder, new ObjectMapper(),
+                almacenIntentosFallidos);
 
         rolColaborador = Rol.builder().id(1L).nombre(Rol.COLABORADOR).build();
         rolSupervisor = Rol.builder().id(2L).nombre(Rol.SUPERVISOR).build();
@@ -362,6 +366,145 @@ class UsuarioServiceTest {
         var resultado = usuarioService.cambiarEstado(5L, true, 5L);
 
         assertThat(resultado.activo()).isTrue();
+    }
+
+    @Test
+    void cambiarEstado_desactivarConMotivo_guardaFechaYMotivo() {
+        Usuario existente = Usuario.builder().id(5L).activo(true).rol(rolColaborador).correo("ana@example.com").build();
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(existente));
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(usuarioRepository.getReferenceById(1L)).thenReturn(Usuario.builder().id(1L).build());
+
+        var resultado = usuarioService.cambiarEstado(5L, false, "  Fin de contrato ", 1L);
+
+        assertThat(resultado.estadoCuenta()).isEqualTo(EstadoCuenta.INACTIVA);
+        assertThat(resultado.motivoBaja()).isEqualTo("Fin de contrato");
+        assertThat(resultado.desactivadoEn()).isNotNull();
+    }
+
+    @Test
+    void cambiarEstado_reactivar_limpiaFechaYMotivoDeLaBaja() {
+        Usuario inactivo = Usuario.builder().id(5L).activo(false).rol(rolColaborador).correo("ana@example.com")
+                .desactivadoEn(java.time.Instant.now()).motivoBaja("Fin de contrato").build();
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(inactivo));
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(usuarioRepository.getReferenceById(1L)).thenReturn(Usuario.builder().id(1L).build());
+
+        var resultado = usuarioService.cambiarEstado(5L, true, "ignorado", 1L);
+
+        assertThat(resultado.estadoCuenta()).isEqualTo(EstadoCuenta.ACTIVA);
+        assertThat(resultado.desactivadoEn()).isNull();
+        assertThat(resultado.motivoBaja()).isNull();
+    }
+
+    @Test
+    void respuesta_usuarioBloqueado_muestraEstadoBloqueada() {
+        Usuario existente = Usuario.builder().id(5L).activo(true).rol(rolColaborador).correo("ana@example.com").build();
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(existente));
+        when(almacenIntentosFallidos.tiempoRestanteDeBloqueo("ana@example.com"))
+                .thenReturn(Optional.of(java.time.Duration.ofMinutes(9)));
+
+        assertThat(usuarioService.obtenerPorId(5L).estadoCuenta()).isEqualTo(EstadoCuenta.BLOQUEADA);
+    }
+
+    @Test
+    void respuesta_claveTemporalPendiente_muestraEstadoClavePendiente() {
+        Usuario existente = Usuario.builder().id(5L).activo(true).debeCambiarClave(true).rol(rolSupervisor)
+                .correo("ana@example.com").build();
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(existente));
+
+        assertThat(usuarioService.obtenerPorId(5L).estadoCuenta()).isEqualTo(EstadoCuenta.CLAVE_PENDIENTE);
+    }
+
+    @Test
+    void desbloquear_limpiaLosIntentosYRegistraBitacora() {
+        Usuario existente = Usuario.builder().id(5L).activo(true).rol(rolColaborador).correo("ana@example.com").build();
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(existente));
+        when(almacenIntentosFallidos.tiempoRestanteDeBloqueo("ana@example.com"))
+                .thenReturn(Optional.of(java.time.Duration.ofMinutes(9)), Optional.empty());
+        when(usuarioRepository.getReferenceById(1L)).thenReturn(Usuario.builder().id(1L).build());
+
+        var resultado = usuarioService.desbloquear(5L, 1L);
+
+        verify(almacenIntentosFallidos).limpiar("ana@example.com");
+        verify(bitacoraRepository).save(any(BitacoraAuditoria.class));
+        assertThat(resultado.estadoCuenta()).isEqualTo(EstadoCuenta.ACTIVA);
+    }
+
+    @Test
+    void eliminar_conHistorial_lanzaOperacionNoPermitidaYNoBorra() {
+        Usuario existente = usuarioExistente(5L, rolColaborador);
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(existente));
+        when(usuarioRepository.tieneHistorial(5L)).thenReturn(true);
+
+        assertThatThrownBy(() -> usuarioService.eliminarUsuario(5L, 1L))
+                .isInstanceOf(OperacionNoPermitidaException.class)
+                .hasMessageContaining("desactívelo");
+        verify(usuarioRepository, never()).delete(any());
+    }
+
+    @Test
+    void eliminar_sinHistorial_borraYRegistraEliminacionEnBitacora() {
+        Usuario existente = usuarioExistente(5L, rolColaborador);
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(existente));
+        when(usuarioRepository.tieneHistorial(5L)).thenReturn(false);
+        when(usuarioRepository.getReferenceById(1L)).thenReturn(Usuario.builder().id(1L).build());
+
+        usuarioService.eliminarUsuario(5L, 1L);
+
+        verify(usuarioRepository).delete(existente);
+        var captor = org.mockito.ArgumentCaptor.forClass(BitacoraAuditoria.class);
+        verify(bitacoraRepository).save(captor.capture());
+        assertThat(captor.getValue().getAccion()).isEqualTo(com.clickclak.backend.model.AccionAuditoria.ELIMINACION);
+        assertThat(captor.getValue().getEntidadId()).isEqualTo(5L);
+    }
+
+    @Test
+    void eliminar_siLaBaseRechazaElBorrado_lanzaOperacionNoPermitida() {
+        Usuario existente = usuarioExistente(5L, rolColaborador);
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(existente));
+        when(usuarioRepository.tieneHistorial(5L)).thenReturn(false);
+        org.mockito.Mockito.doThrow(new org.springframework.dao.DataIntegrityViolationException("fk"))
+                .when(usuarioRepository).flush();
+
+        assertThatThrownBy(() -> usuarioService.eliminarUsuario(5L, 1L))
+                .isInstanceOf(OperacionNoPermitidaException.class);
+        verify(bitacoraRepository, never()).save(any());
+    }
+
+    @Test
+    void eliminar_laPropiaCuenta_lanzaOperacionNoPermitida() {
+        Usuario admin = usuarioExistente(5L, rolAdmin);
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(admin));
+
+        assertThatThrownBy(() -> usuarioService.eliminarUsuario(5L, 5L))
+                .isInstanceOf(OperacionNoPermitidaException.class);
+        verify(usuarioRepository, never()).delete(any());
+    }
+
+    @Test
+    void eliminar_alUltimoAdminActivo_lanzaOperacionNoPermitida() {
+        Usuario admin = usuarioExistente(7L, rolAdmin);
+        when(usuarioRepository.findById(7L)).thenReturn(Optional.of(admin));
+        when(usuarioRepository.countByRolNombreAndActivoTrue(Rol.RRHH_ADMIN)).thenReturn(1L);
+
+        assertThatThrownBy(() -> usuarioService.eliminarUsuario(7L, 1L))
+                .isInstanceOf(OperacionNoPermitidaException.class);
+        verify(usuarioRepository, never()).delete(any());
+    }
+
+    @Test
+    void buscar_conTamanoFueraDeRango_lanzaSolicitudInvalida() {
+        assertThatThrownBy(() -> usuarioService.buscar(null, null, null, 0, 101))
+                .isInstanceOf(SolicitudInvalidaException.class);
+        assertThatThrownBy(() -> usuarioService.buscar(null, null, null, -1, 20))
+                .isInstanceOf(SolicitudInvalidaException.class);
+    }
+
+    @Test
+    void buscar_conEstadoDesconocido_lanzaSolicitudInvalida() {
+        assertThatThrownBy(() -> usuarioService.buscar(null, null, "SUSPENDIDA", 0, 20))
+                .isInstanceOf(SolicitudInvalidaException.class);
     }
 
     private Usuario usuarioExistente(Long id, Rol rol) {
