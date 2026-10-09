@@ -1,6 +1,7 @@
 package com.clickclak.backend.security;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import org.springframework.http.MediaType;
@@ -39,15 +40,23 @@ public class ManejadorErroresAutenticacion implements AuthenticationEntryPoint, 
 
     /** HU04: el usuario entró con una clave temporal y debe cambiarla antes de usar el resto de la API. */
     public void clavePendiente(HttpServletResponse response) throws IOException {
-        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.getWriter().write(objectMapper.writeValueAsString(
-                Map.of("error", "Debe cambiar su contraseña temporal antes de continuar", "codigo", "CLAVE_PENDIENTE")));
+        escribirJson(response, HttpServletResponse.SC_FORBIDDEN,
+                Map.of("error", "Debe cambiar su contraseña temporal antes de continuar", "codigo", "CLAVE_PENDIENTE"));
     }
 
     private void escribirError(HttpServletResponse response, int status, String mensaje) throws IOException {
+        escribirJson(response, status, Map.of("error", mensaje));
+    }
+
+    /**
+     * Sin fijar la codificación, el contenedor escribe con ISO-8859-1 y la "ñ" o la "ó" de los
+     * mensajes llegan como un byte que no es UTF-8 válido: el cliente ve texto roto y cualquier
+     * lector estricto de JSON falla. Se detectó al verificar el despliegue con `sed`.
+     */
+    private void escribirJson(HttpServletResponse response, int status, Map<String, String> cuerpo) throws IOException {
         response.setStatus(status);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.getWriter().write(objectMapper.writeValueAsString(Map.of("error", mensaje)));
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        response.getWriter().write(objectMapper.writeValueAsString(cuerpo));
     }
 }
