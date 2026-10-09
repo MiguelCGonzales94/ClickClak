@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { Icono, type NombreIcono } from "./Iconos";
 import { servicioAutenticacion } from "../services/servicioAutenticacion";
 import { useSesion } from "../store/ContextoSesion";
 
-const ENLACES_NAV: { a: string; etiqueta: string; icono: NombreIcono; fin?: boolean }[] = [
+const ENLACES_NAV: { a: string; etiqueta: string; icono: NombreIcono; fin?: boolean; soloRol?: string }[] = [
   { a: "/", etiqueta: "Dashboard", icono: "dashboard", fin: true },
-  { a: "/usuarios", etiqueta: "Usuarios", icono: "usuarios" },
+  // La gestión de usuarios (alta, claves, bajas) es exclusiva de RRHH_ADMIN en el servidor.
+  { a: "/usuarios", etiqueta: "Usuarios", icono: "usuarios", soloRol: "RRHH_ADMIN" },
   { a: "/sedes", etiqueta: "Sedes y servicios", icono: "edificio" },
   { a: "/turnos", etiqueta: "Turnos", icono: "turnos" },
   { a: "/asignaciones", etiqueta: "Asignaciones", icono: "asignaciones" },
@@ -21,9 +22,10 @@ export function EstructuraPanel() {
 
   const enlacesVisibles = useMemo(() => {
     const texto = busqueda.trim().toLowerCase();
-    if (!texto) return ENLACES_NAV;
-    return ENLACES_NAV.filter((enlace) => enlace.etiqueta.toLowerCase().includes(texto));
-  }, [busqueda]);
+    const permitidos = ENLACES_NAV.filter((enlace) => !enlace.soloRol || enlace.soloRol === perfil?.rol);
+    if (!texto) return permitidos;
+    return permitidos.filter((enlace) => enlace.etiqueta.toLowerCase().includes(texto));
+  }, [busqueda, perfil?.rol]);
 
   async function manejarCerrarSesion() {
     if (token) {
@@ -100,6 +102,14 @@ export function EstructuraPanel() {
             </p>
             <p className="text-xs text-slate-400 truncate">{perfil?.rol}</p>
           </div>
+          <Link
+            to="/cambiar-clave"
+            title="Cambiar mi contraseña"
+            aria-label="Cambiar mi contraseña"
+            className="h-8 w-8 rounded-sm text-slate-400 hover:bg-white/10 hover:text-white transition-colors flex items-center justify-center"
+          >
+            <Icono nombre="seguridad" className="h-5 w-5" />
+          </Link>
           <button
             onClick={manejarCerrarSesion}
             title="Cerrar sesión"

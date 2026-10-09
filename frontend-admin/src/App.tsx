@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { EstructuraPanel } from "./components/EstructuraPanel";
 import { PaginaAsignaciones } from "./pages/PaginaAsignaciones";
+import { PaginaCambiarClave } from "./pages/PaginaCambiarClave";
 import { PaginaDashboard } from "./pages/PaginaDashboard";
 import { PaginaIncidencias } from "./pages/PaginaIncidencias";
 import { PaginaInicioSesion } from "./pages/PaginaInicioSesion";
@@ -18,10 +19,15 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<PaginaInicioSesion />} />
+          <Route element={<RutaProtegida />}>
+            <Route path="/cambiar-clave" element={<PaginaCambiarClave />} />
+          </Route>
           <Route element={<RutaProtegida rolesPermitidos={ROLES_ADMIN} />}>
             <Route element={<EstructuraPanel />}>
               <Route path="/" element={<PaginaDashboard />} />
-              <Route path="/usuarios" element={<PaginaUsuarios />} />
+              <Route element={<RutaProtegida rolesPermitidos={["RRHH_ADMIN"]} redirigirSinPermisoA="/" />}>
+                <Route path="/usuarios" element={<PaginaUsuarios />} />
+              </Route>
               <Route path="/sedes" element={<PaginaSedes />} />
               <Route path="/turnos" element={<PaginaTurnos />} />
               <Route path="/asignaciones" element={<PaginaAsignaciones />} />

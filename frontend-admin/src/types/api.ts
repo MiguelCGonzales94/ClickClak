@@ -11,6 +11,8 @@ export interface RespuestaLogin {
   rol: string;
   nombres: string;
   apellidos: string;
+  /** Verdadero tras un restablecimiento del administrador: debe cambiar la clave antes de seguir. */
+  debeCambiarClave: boolean;
 }
 
 export interface RespuestaPerfil {
@@ -19,11 +21,14 @@ export interface RespuestaPerfil {
   apellidos: string;
   correo: string;
   rol: string;
+  debeCambiarClave: boolean;
 }
 
 export interface ErrorApi {
   error: string;
 }
+
+export type EstadoCuenta = "ACTIVA" | "INACTIVA" | "BLOQUEADA" | "CLAVE_PENDIENTE";
 
 export interface RespuestaUsuario {
   id: number;
@@ -34,7 +39,49 @@ export interface RespuestaUsuario {
   correo: string;
   rol: string;
   activo: boolean;
+  estadoCuenta: EstadoCuenta;
+  desactivadoEn: string | null;
+  motivoBaja: string | null;
   creadoEn: string;
+}
+
+export interface RespuestaPagina<T> {
+  contenido: T[];
+  pagina: number;
+  tamano: number;
+  total: number;
+  totalPaginas: number;
+}
+
+export interface FiltrosUsuarios {
+  texto: string;
+  rol: string;
+  estado: EstadoCuenta | "";
+  pagina: number;
+  tamano: number;
+}
+
+export interface RespuestaHistorialUsuario {
+  id: number;
+  accion: "CREACION" | "MODIFICACION" | "ELIMINACION";
+  actorId: number | null;
+  actorNombre: string | null;
+  valoresAnteriores: Record<string, unknown> | null;
+  valoresNuevos: Record<string, unknown> | null;
+  creadoEn: string;
+}
+
+export interface SolicitudCambiarClave {
+  claveActual: string;
+  claveNueva: string;
+}
+
+export interface RespuestaClaveTemporal {
+  claveTemporal: string;
+}
+
+export interface RespuestaMensaje {
+  mensaje: string;
 }
 
 export interface SolicitudRegistrarUsuario {
@@ -54,6 +101,8 @@ export interface SolicitudEditarUsuario {
   numeroDocumento: string;
   correo: string;
   rol: string;
+  /** Solo cuando el cambio de rol lo exige (de COLABORADOR a SUPERVISOR o RRHH_ADMIN). */
+  password?: string;
 }
 
 export interface RespuestaProyecto {
