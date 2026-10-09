@@ -18,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.clickclak.backend.dto.EditarUsuarioRequest;
 import com.clickclak.backend.dto.RegistrarUsuarioRequest;
+import com.clickclak.backend.exception.OperacionNoPermitidaException;
 import com.clickclak.backend.exception.RecursoDuplicadoException;
 import com.clickclak.backend.exception.RecursoNoEncontradoException;
 import com.clickclak.backend.exception.SolicitudInvalidaException;
@@ -41,6 +42,7 @@ class UsuarioServiceTest {
 
     private Rol rolColaborador;
     private Rol rolSupervisor;
+    private Rol rolAdmin;
 
     @BeforeEach
     void configurar() {
@@ -49,6 +51,7 @@ class UsuarioServiceTest {
 
         rolColaborador = Rol.builder().id(1L).nombre(Rol.COLABORADOR).build();
         rolSupervisor = Rol.builder().id(2L).nombre(Rol.SUPERVISOR).build();
+        rolAdmin = Rol.builder().id(3L).nombre(Rol.RRHH_ADMIN).build();
     }
 
     @Test
@@ -158,7 +161,7 @@ class UsuarioServiceTest {
         when(usuarioRepository.findByCorreo("nuevo@example.com")).thenReturn(Optional.of(Usuario.builder().id(99L).build()));
 
         var solicitud = new EditarUsuarioRequest(
-                "Ana", "Pérez", "DNI", "11111111", "nuevo@example.com", Rol.COLABORADOR);
+                "Ana", "Pérez", "DNI", "11111111", "nuevo@example.com", Rol.COLABORADOR, null);
 
         assertThatThrownBy(() -> usuarioService.editarUsuario(5L, solicitud, 1L))
                 .isInstanceOf(RecursoDuplicadoException.class);
@@ -174,7 +177,7 @@ class UsuarioServiceTest {
         when(usuarioRepository.getReferenceById(1L)).thenReturn(Usuario.builder().id(1L).build());
 
         var solicitud = new EditarUsuarioRequest(
-                "Ana María", "Pérez", "DNI", "11111111", "ana@example.com", Rol.COLABORADOR);
+                "Ana María", "Pérez", "DNI", "11111111", "ana@example.com", Rol.COLABORADOR, null);
 
         var resultado = usuarioService.editarUsuario(5L, solicitud, 1L);
 
@@ -193,6 +196,181 @@ class UsuarioServiceTest {
 
         assertThat(resultado.activo()).isFalse();
         verify(bitacoraRepository).save(any(BitacoraAuditoria.class));
+    }
+
+    @Test
+    void registrar_correoConMayusculasYEspacios_seGuardaNormalizado() {
+        when(usuarioRepository.findByCorreo("ana@example.com")).thenReturn(Optional.empty());
+        when(usuarioRepository.existsByTipoDocumentoAndNumeroDocumento(any(), any())).thenReturn(false);
+        when(rolRepository.findByNombre(Rol.COLABORADOR)).thenReturn(Optional.of(rolColaborador));
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(usuarioRepository.getReferenceById(1L)).thenReturn(Usuario.builder().id(1L).build());
+
+        var resultado = usuarioService.registrarUsuario(solicitudColaborador("  Ana@Example.COM ", "12345678"), 1L);
+
+        assertThat(resultado.correo()).isEqualTo("ana@example.com");
+    }
+
+    @Test
+    void editar_correoQueSoloDifiereEnMayusculas_noCuentaComoCambio() {
+        Usuario existente = usuarioExistente(5L, rolColaborador);
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(existente));
+        when(rolRepository.findByNombre(Rol.COLABORADOR)).thenReturn(Optional.of(rolColaborador));
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(usuarioRepository.getReferenceById(1L)).thenReturn(Usuario.builder().id(1L).build());
+
+        var solicitud = new EditarUsuarioRequest(
+                "Ana", "Pérez", "DNI", "11111111", "ANA@example.com", Rol.COLABORADOR, null);
+
+        var resultado = usuarioService.editarUsuario(5L, solicitud, 1L);
+
+        assertThat(resultado.correo()).isEqualTo("ana@example.com");
+        verify(usuarioRepository, never()).findByCorreo(any());
+    }
+
+    @Test
+    void editar_colaboradorASupervisorSinPassword_lanzaSolicitudInvalida() {
+        Usuario existente = usuarioExistente(5L, rolColaborador);
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(existente));
+        when(rolRepository.findByNombre(Rol.SUPERVISOR)).thenReturn(Optional.of(rolSupervisor));
+
+        var solicitud = solicitudEdicion(Rol.SUPERVISOR, null);
+
+        assertThatThrownBy(() -> usuarioService.editarUsuario(5L, solicitud, 1L))
+                .isInstanceOf(SolicitudInvalidaException.class);
+        verify(usuarioRepository, never()).save(any());
+    }
+
+    @Test
+    void editar_colaboradorASupervisorConPassword_guardaElHash() {
+        Usuario existente = usuarioExistente(5L, rolColaborador);
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(existente));
+        when(rolRepository.findByNombre(Rol.SUPERVISOR)).thenReturn(Optional.of(rolSupervisor));
+        when(passwordEncoder.encode("claveSegura123")).thenReturn("hash-simulado");
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(usuarioRepository.getReferenceById(1L)).thenReturn(Usuario.builder().id(1L).build());
+
+        var resultado = usuarioService.editarUsuario(5L, solicitudEdicion(Rol.SUPERVISOR, "claveSegura123"), 1L);
+
+        assertThat(resultado.rol()).isEqualTo(Rol.SUPERVISOR);
+        assertThat(existente.getPasswordHash()).isEqualTo("hash-simulado");
+    }
+
+    @Test
+    void editar_supervisorAColaborador_borraElHash() {
+        Usuario existente = usuarioExistente(5L, rolSupervisor);
+        existente.setPasswordHash("hash-previo");
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(existente));
+        when(rolRepository.findByNombre(Rol.COLABORADOR)).thenReturn(Optional.of(rolColaborador));
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(usuarioRepository.getReferenceById(1L)).thenReturn(Usuario.builder().id(1L).build());
+
+        usuarioService.editarUsuario(5L, solicitudEdicion(Rol.COLABORADOR, null), 1L);
+
+        assertThat(existente.getPasswordHash()).isNull();
+    }
+
+    @Test
+    void editar_supervisorAColaboradorConPassword_lanzaSolicitudInvalida() {
+        Usuario existente = usuarioExistente(5L, rolSupervisor);
+        existente.setPasswordHash("hash-previo");
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(existente));
+        when(rolRepository.findByNombre(Rol.COLABORADOR)).thenReturn(Optional.of(rolColaborador));
+
+        assertThatThrownBy(() -> usuarioService.editarUsuario(5L, solicitudEdicion(Rol.COLABORADOR, "claveSegura123"), 1L))
+                .isInstanceOf(SolicitudInvalidaException.class);
+        assertThat(existente.getPasswordHash()).isEqualTo("hash-previo");
+    }
+
+    @Test
+    void editar_sinCambiarDeTipoDeRolConPassword_lanzaSolicitudInvalida() {
+        Usuario existente = usuarioExistente(5L, rolSupervisor);
+        existente.setPasswordHash("hash-previo");
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(existente));
+        when(rolRepository.findByNombre(Rol.SUPERVISOR)).thenReturn(Optional.of(rolSupervisor));
+
+        assertThatThrownBy(() -> usuarioService.editarUsuario(5L, solicitudEdicion(Rol.SUPERVISOR, "claveSegura123"), 1L))
+                .isInstanceOf(SolicitudInvalidaException.class);
+        assertThat(existente.getPasswordHash()).isEqualTo("hash-previo");
+    }
+
+    @Test
+    void editar_elPropioRol_lanzaOperacionNoPermitida() {
+        Usuario admin = usuarioExistente(5L, rolAdmin);
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(admin));
+        when(rolRepository.findByNombre(Rol.SUPERVISOR)).thenReturn(Optional.of(rolSupervisor));
+
+        assertThatThrownBy(() -> usuarioService.editarUsuario(5L, solicitudEdicion(Rol.SUPERVISOR, "claveSegura123"), 5L))
+                .isInstanceOf(OperacionNoPermitidaException.class);
+        verify(usuarioRepository, never()).save(any());
+    }
+
+    @Test
+    void editar_bajarDeRolAlUltimoAdminActivo_lanzaOperacionNoPermitida() {
+        Usuario admin = usuarioExistente(7L, rolAdmin);
+        when(usuarioRepository.findById(7L)).thenReturn(Optional.of(admin));
+        when(rolRepository.findByNombre(Rol.SUPERVISOR)).thenReturn(Optional.of(rolSupervisor));
+        when(usuarioRepository.countByRolNombreAndActivoTrue(Rol.RRHH_ADMIN)).thenReturn(1L);
+
+        assertThatThrownBy(() -> usuarioService.editarUsuario(7L, solicitudEdicion(Rol.SUPERVISOR, "claveSegura123"), 1L))
+                .isInstanceOf(OperacionNoPermitidaException.class);
+        verify(usuarioRepository, never()).save(any());
+    }
+
+    @Test
+    void editar_bajarDeRolAUnAdminHabiendoOtros_esPermitido() {
+        Usuario admin = usuarioExistente(7L, rolAdmin);
+        when(usuarioRepository.findById(7L)).thenReturn(Optional.of(admin));
+        when(rolRepository.findByNombre(Rol.SUPERVISOR)).thenReturn(Optional.of(rolSupervisor));
+        when(usuarioRepository.countByRolNombreAndActivoTrue(Rol.RRHH_ADMIN)).thenReturn(2L);
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(usuarioRepository.getReferenceById(1L)).thenReturn(Usuario.builder().id(1L).build());
+
+        var resultado = usuarioService.editarUsuario(7L, solicitudEdicion(Rol.SUPERVISOR, null), 1L);
+
+        assertThat(resultado.rol()).isEqualTo(Rol.SUPERVISOR);
+    }
+
+    @Test
+    void cambiarEstado_desactivarseASiMismo_lanzaOperacionNoPermitida() {
+        Usuario admin = usuarioExistente(5L, rolAdmin);
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(admin));
+
+        assertThatThrownBy(() -> usuarioService.cambiarEstado(5L, false, 5L))
+                .isInstanceOf(OperacionNoPermitidaException.class);
+        assertThat(admin.isActivo()).isTrue();
+    }
+
+    @Test
+    void cambiarEstado_desactivarAlUltimoAdminActivo_lanzaOperacionNoPermitida() {
+        Usuario admin = usuarioExistente(7L, rolAdmin);
+        when(usuarioRepository.findById(7L)).thenReturn(Optional.of(admin));
+        when(usuarioRepository.countByRolNombreAndActivoTrue(Rol.RRHH_ADMIN)).thenReturn(1L);
+
+        assertThatThrownBy(() -> usuarioService.cambiarEstado(7L, false, 1L))
+                .isInstanceOf(OperacionNoPermitidaException.class);
+        assertThat(admin.isActivo()).isTrue();
+    }
+
+    @Test
+    void cambiarEstado_activar_noExigeLasProteccionesDeDesactivacion() {
+        Usuario inactivo = Usuario.builder().id(5L).activo(false).rol(rolAdmin).build();
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(inactivo));
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(usuarioRepository.getReferenceById(5L)).thenReturn(inactivo);
+
+        var resultado = usuarioService.cambiarEstado(5L, true, 5L);
+
+        assertThat(resultado.activo()).isTrue();
+    }
+
+    private Usuario usuarioExistente(Long id, Rol rol) {
+        return Usuario.builder().id(id).correo("ana@example.com").tipoDocumento("DNI")
+                .numeroDocumento("11111111").rol(rol).activo(true).build();
+    }
+
+    private EditarUsuarioRequest solicitudEdicion(String rol, String password) {
+        return new EditarUsuarioRequest("Ana", "Pérez", "DNI", "11111111", "ana@example.com", rol, password);
     }
 
     private RegistrarUsuarioRequest solicitudColaborador(String correo, String documento) {

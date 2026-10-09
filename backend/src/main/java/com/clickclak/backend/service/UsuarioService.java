@@ -2,6 +2,7 @@ package com.clickclak.backend.service;
 
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -12,6 +13,7 @@ import com.clickclak.backend.dto.EditarUsuarioRequest;
 import com.clickclak.backend.dto.RegistrarUsuarioRequest;
 import com.clickclak.backend.dto.UsuarioResponse;
 import com.clickclak.backend.exception.RecursoDuplicadoException;
+import com.clickclak.backend.exception.OperacionNoPermitidaException;
 import com.clickclak.backend.exception.RecursoNoEncontradoException;
 import com.clickclak.backend.exception.SolicitudInvalidaException;
 import com.clickclak.backend.model.AccionAuditoria;
@@ -54,8 +56,9 @@ public class UsuarioService {
 
     @Transactional
     public UsuarioResponse registrarUsuario(RegistrarUsuarioRequest solicitud, Long actorId) {
-        if (usuarioRepository.findByCorreo(solicitud.correo()).isPresent()) {
-            throw new RecursoDuplicadoException("Ya existe un usuario con el correo " + solicitud.correo());
+        String correo = normalizarCorreo(solicitud.correo());
+        if (usuarioRepository.findByCorreo(correo).isPresent()) {
+            throw new RecursoDuplicadoException("Ya existe un usuario con el correo " + correo);
         }
         if (usuarioRepository.existsByTipoDocumentoAndNumeroDocumento(solicitud.tipoDocumento(), solicitud.numeroDocumento())) {
             throw new RecursoDuplicadoException(
@@ -70,7 +73,7 @@ public class UsuarioService {
                 .apellidos(solicitud.apellidos())
                 .tipoDocumento(solicitud.tipoDocumento())
                 .numeroDocumento(solicitud.numeroDocumento())
-                .correo(solicitud.correo())
+                .correo(correo)
                 .rol(rol)
                 .passwordHash(passwordHash)
                 .activo(true)
@@ -85,9 +88,10 @@ public class UsuarioService {
         Usuario usuario = obtenerUsuario(usuarioId);
         Map<String, Object> estadoAnterior = capturarEstado(usuario);
 
-        boolean cambiaCorreo = !usuario.getCorreo().equalsIgnoreCase(solicitud.correo());
-        if (cambiaCorreo && usuarioRepository.findByCorreo(solicitud.correo()).isPresent()) {
-            throw new RecursoDuplicadoException("Ya existe un usuario con el correo " + solicitud.correo());
+        String correo = normalizarCorreo(solicitud.correo());
+        boolean cambiaCorreo = !usuario.getCorreo().equalsIgnoreCase(correo);
+        if (cambiaCorreo && usuarioRepository.findByCorreo(correo).isPresent()) {
+            throw new RecursoDuplicadoException("Ya existe un usuario con el correo " + correo);
         }
         boolean cambiaDocumento = !usuario.getTipoDocumento().equals(solicitud.tipoDocumento())
                 || !usuario.getNumeroDocumento().equals(solicitud.numeroDocumento());
@@ -98,13 +102,17 @@ public class UsuarioService {
         }
 
         Rol rol = buscarRol(solicitud.rol());
+        boolean cambiaRol = !usuario.getRol().getNombre().equals(rol.getNombre());
+        if (cambiaRol) {
+            validarCambioDeRol(usuario, actorId);
+        }
 
         usuario.setNombres(solicitud.nombres());
         usuario.setApellidos(solicitud.apellidos());
         usuario.setTipoDocumento(solicitud.tipoDocumento());
         usuario.setNumeroDocumento(solicitud.numeroDocumento());
-        usuario.setCorreo(solicitud.correo());
-        usuario.setRol(rol);
+        usuario.setCorreo(correo);
+        aplicarRolYContrasena(usuario, rol, solicitud.password());
         usuarioRepository.save(usuario);
 
         registrarBitacora(actorId, usuario.getId(), AccionAuditoria.MODIFICACION, estadoAnterior, capturarEstado(usuario));
@@ -114,6 +122,9 @@ public class UsuarioService {
     @Transactional
     public UsuarioResponse cambiarEstado(Long usuarioId, boolean activo, Long actorId) {
         Usuario usuario = obtenerUsuario(usuarioId);
+        if (!activo) {
+            validarDesactivacion(usuario, actorId);
+        }
         Map<String, Object> estadoAnterior = Map.of("activo", usuario.isActivo());
 
         usuario.setActivo(activo);
@@ -161,6 +172,52 @@ public class UsuarioService {
             PoliticaContrasenas.validar(password);
         }
         return tienePassword ? passwordEncoder.encode(password) : null;
+    }
+
+    /**
+     * Un COLABORADOR no tiene contraseña y los demás roles sí, así que cambiar entre ellos obliga a
+     * crearla o a borrarla. Sin cambio de tipo de rol no se acepta {@code password}: cambiar la clave
+     * de un usuario existente tiene sus propios endpoints (propia o restablecimiento por el admin).
+     */
+    private void aplicarRolYContrasena(Usuario usuario, Rol rolNuevo, String password) {
+        boolean eraColaborador = Rol.COLABORADOR.equals(usuario.getRol().getNombre());
+        boolean seraColaborador = Rol.COLABORADOR.equals(rolNuevo.getNombre());
+        boolean tienePassword = password != null && !password.isBlank();
+
+        if (eraColaborador != seraColaborador) {
+            usuario.setPasswordHash(calcularPasswordHash(rolNuevo, password));
+        } else if (tienePassword) {
+            throw new SolicitudInvalidaException(
+                    "Para cambiar la contraseña de un usuario use el restablecimiento de contraseña");
+        }
+        usuario.setRol(rolNuevo);
+    }
+
+    private void validarCambioDeRol(Usuario usuario, Long actorId) {
+        if (usuario.getId().equals(actorId)) {
+            throw new OperacionNoPermitidaException("No puede cambiar su propio rol");
+        }
+        if (usuario.isActivo() && esUltimoAdministradorActivo(usuario)) {
+            throw new OperacionNoPermitidaException("Debe quedar al menos un administrador activo");
+        }
+    }
+
+    private void validarDesactivacion(Usuario usuario, Long actorId) {
+        if (usuario.getId().equals(actorId)) {
+            throw new OperacionNoPermitidaException("No puede desactivar su propia cuenta");
+        }
+        if (usuario.isActivo() && esUltimoAdministradorActivo(usuario)) {
+            throw new OperacionNoPermitidaException("Debe quedar al menos un administrador activo");
+        }
+    }
+
+    private boolean esUltimoAdministradorActivo(Usuario usuario) {
+        return Rol.RRHH_ADMIN.equals(usuario.getRol().getNombre())
+                && usuarioRepository.countByRolNombreAndActivoTrue(Rol.RRHH_ADMIN) <= 1;
+    }
+
+    private String normalizarCorreo(String correo) {
+        return correo.trim().toLowerCase(Locale.ROOT);
     }
 
     private Map<String, Object> capturarEstado(Usuario usuario) {

@@ -72,7 +72,7 @@ Me detengo y consulto, sin improvisar, si ocurre cualquiera de estas:
 
 1.3. **Corte de sesión (H1, D1).** `JwtAuthenticationFilter` recibe `UsuarioRepository` y, por petición, carga al usuario por id:
 - Inexistente o inactivo: limpia el contexto de seguridad (queda como no autenticado, 401).
-- Con `debeCambiarClave`: solo deja pasar `/api/autenticacion/cambiar-clave` y `/api/autenticacion/logout`; el resto responde 403 con un código de error estable (`CLAVE_PENDIENTE`).
+- Con `debeCambiarClave`: solo deja pasar `/api/auth/cambiar-clave` y `/api/auth/logout`; el resto responde 403 con un código de error estable (`CLAVE_PENDIENTE`).
 - El rol se toma de la base y no del token, para que un cambio de rol tenga efecto inmediato.
 - Ajustar las pruebas existentes que construyen el filtro o autentican con un token fabricado. Pruebas nuevas: usuario desactivado con token aún vigente recibe 401; usuario con clave pendiente recibe 403 fuera del endpoint permitido.
 
@@ -113,7 +113,7 @@ Me detengo y consulto, sin improvisar, si ocurre cualquiera de estas:
 
 ## 6. Fase 3: contraseñas (rama `feature/usuarios-3-claves`)
 
-3.1. **Cambio propio (D5).** `POST /api/autenticacion/cambiar-clave` con `{ claveActual, claveNueva }`.
+3.1. **Cambio propio (D5).** `POST /api/auth/cambiar-clave` con `{ claveActual, claveNueva }`.
 - Verifica la actual con `PasswordEncoder.matches`; si falla, registra el fallo en `AlmacenIntentosFallidos` y responde con el mismo error genérico del login.
 - Aplica `PoliticaContrasenas`; la nueva debe ser distinta de la actual.
 - Guarda el hash, pone `debeCambiarClave` en falso, revoca el token en uso (`AlmacenTokensRevocados`) y registra en bitácora (sin la clave). El usuario vuelve a iniciar sesión.
