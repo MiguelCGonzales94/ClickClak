@@ -214,7 +214,26 @@ export interface RespuestaAsignacion {
   nombreHorario: string;
   fechaInicio: string;
   fechaFin: string | null;
-  estado: "VIGENTE" | "PROGRAMADA";
+  estado: EstadoAsignacion;
+}
+
+/** PROGRAMADA aún no empezó, VIGENTE está en curso y FINALIZADA ya terminó (el servidor lo calcula contra hoy). */
+export type EstadoAsignacion = "VIGENTE" | "PROGRAMADA" | "FINALIZADA";
+
+export interface SolicitudEditarAsignacion {
+  proyectoId: number;
+  ubicacionId: number;
+  horarioId: number;
+  fechaInicio: string;
+  fechaFin?: string | null;
+}
+
+/** Pasa al técnico a otra sede desde `fechaCambio`; proyecto y turno son opcionales y, si faltan, se conservan. */
+export interface SolicitudMoverAsignacion {
+  ubicacionId: number;
+  proyectoId?: number;
+  horarioId?: number;
+  fechaCambio: string;
 }
 
 export interface SolicitudRegistrarAsignacion {

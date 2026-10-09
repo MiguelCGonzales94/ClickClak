@@ -77,7 +77,7 @@ public class AsignacionService {
         Horario horario = cargarHorario(solicitud.horarioId());
 
         validarSedeDelProyecto(ubicacion, proyecto);
-        validarSinConflicto(usuario.getId(), ubicacion, solicitud.fechaInicio(), solicitud.fechaFin(), null);
+        validarSinConflicto(usuario, ubicacion, solicitud.fechaInicio(), solicitud.fechaFin(), null);
 
         Asignacion asignacion = asignacionRepository.save(Asignacion.builder()
                 .usuario(usuario).proyecto(proyecto).ubicacion(ubicacion).horario(horario)
@@ -99,7 +99,7 @@ public class AsignacionService {
         Horario horario = cargarHorario(solicitud.horarioId());
 
         validarSedeDelProyecto(ubicacion, proyecto);
-        validarSinConflicto(asignacion.getUsuario().getId(), ubicacion, solicitud.fechaInicio(), solicitud.fechaFin(),
+        validarSinConflicto(asignacion.getUsuario(), ubicacion, solicitud.fechaInicio(), solicitud.fechaFin(),
                 asignacion.getId());
 
         Map<String, Object> anterior = capturarEstado(asignacion);
@@ -157,7 +157,7 @@ public class AsignacionService {
         Horario horario = solicitud.horarioId() != null ? cargarHorario(solicitud.horarioId()) : actual.getHorario();
         validarSedeDelProyecto(ubicacion, proyecto);
         // La actual ya no cuenta para el cruce de fechas de la sede nueva: se está dejando.
-        validarSinConflicto(actual.getUsuario().getId(), ubicacion, fechaCambio, actual.getFechaFin(), actual.getId());
+        validarSinConflicto(actual.getUsuario(), ubicacion, fechaCambio, actual.getFechaFin(), actual.getId());
 
         Map<String, Object> anterior = capturarEstado(actual);
         LocalDate finOriginal = actual.getFechaFin();
@@ -212,14 +212,15 @@ public class AsignacionService {
     }
 
     /** Solo choca la misma sede con fechas cruzadas; otras sedes del mismo técnico no importan. */
-    private void validarSinConflicto(Long usuarioId, Ubicacion ubicacion, LocalDate inicio, LocalDate fin, Long excluirId) {
-        boolean hayConflicto = asignacionRepository.findByUsuarioIdAndActivoTrueOrderByFechaInicioAsc(usuarioId).stream()
+    private void validarSinConflicto(Usuario usuario, Ubicacion ubicacion, LocalDate inicio, LocalDate fin, Long excluirId) {
+        boolean hayConflicto = asignacionRepository.findByUsuarioIdAndActivoTrueOrderByFechaInicioAsc(usuario.getId()).stream()
                 .filter(existente -> !existente.getId().equals(excluirId))
                 .filter(existente -> existente.getUbicacion() != null
                         && existente.getUbicacion().getId().equals(ubicacion.getId()))
                 .anyMatch(existente -> seSuperponen(inicio, fin, existente.getFechaInicio(), existente.getFechaFin()));
         if (hayConflicto) {
-            throw new ConflictoAsignacionException(usuarioId, ubicacion.getNombre());
+            throw new ConflictoAsignacionException(
+                    (usuario.getNombres() + " " + usuario.getApellidos()).trim(), ubicacion.getNombre());
         }
     }
 

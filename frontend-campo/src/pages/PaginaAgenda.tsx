@@ -132,6 +132,11 @@ export function PaginaAgenda() {
     () => asignaciones.find((asignacion) => asignacion.estado === "VIGENTE") ?? asignaciones[0],
     [asignaciones],
   );
+  // Un técnico puede tener varias sedes vigentes a la vez: la tarjeta las lista todas.
+  const asignacionesVigentes = useMemo(
+    () => asignaciones.filter((asignacion) => asignacion.estado === "VIGENTE"),
+    [asignaciones],
+  );
 
   async function manejarCerrarSesion() {
     // HU02: se intenta revocar el token en el servidor, pero el cierre local ocurre
@@ -311,14 +316,29 @@ export function PaginaAgenda() {
                 <Icono nombre="pin" className="h-5 w-5" />
               </span>
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-[#061229]">
-                  {asignacionPrincipal?.nombreProyecto ?? "Sin asignación vigente"}
-                </p>
-                <p className="mt-1 text-sm text-[#66718A]">
-                  {asignacionPrincipal
-                    ? `${asignacionPrincipal.nombreUbicacion} · ${asignacionPrincipal.nombreHorario}`
-                    : "La agenda se actualizará cuando el supervisor asigne una sede."}
-                </p>
+                {asignacionesVigentes.length > 1 ? (
+                  <>
+                    <p className="text-sm font-semibold text-[#061229]">{asignacionesVigentes.length} sedes asignadas hoy</p>
+                    <ul className="mt-1 space-y-0.5 text-sm text-[#66718A]">
+                      {asignacionesVigentes.map((asignacion) => (
+                        <li key={asignacion.id}>
+                          {asignacion.nombreUbicacion} · {asignacion.nombreHorario}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm font-semibold text-[#061229]">
+                      {asignacionPrincipal?.nombreProyecto ?? "Sin asignación vigente"}
+                    </p>
+                    <p className="mt-1 text-sm text-[#66718A]">
+                      {asignacionPrincipal
+                        ? `${asignacionPrincipal.nombreUbicacion} · ${asignacionPrincipal.nombreHorario}`
+                        : "La agenda se actualizará cuando el supervisor asigne una sede."}
+                    </p>
+                  </>
+                )}
                 <p className="mt-2 text-xs text-[#66718A]">{detalleDispositivo}</p>
               </div>
             </div>
