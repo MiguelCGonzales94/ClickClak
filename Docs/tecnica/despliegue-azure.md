@@ -181,6 +181,8 @@ Insumo para la retrospectiva del Sprint 4:
 
 **Actualización (9-oct-2026).** Se desplegó dos veces más desde `main`, con el mismo procedimiento: `b5e429f` (módulo de usuarios completo, PR #21 a #26) y `a35f19e` (PR #27, codificación de los mensajes 401 y 403). Antes del primero se hizo un respaldo con `pg_dump` en `~/respaldos/` y se aplicó la migración V3; antes de cada paquete se comparó la VM con él con `diff` (así se detectó que `main` no tenía los cambios de #21, que la VM ya corría). Los directorios anteriores quedaron en `~/clickclak-prev-before-b5e429f` y `~/clickclak-prev-before-a35f19e`. Resultado: `verificar-despliegue.sh` con **73 comprobaciones correctas** (ver [resultados-de-pruebas.md](resultados-de-pruebas.md), 9.7, y [`evidencia/despliegue-main-2026-10-09.txt`](evidencia/despliegue-main-2026-10-09.txt)). El cupo de login del proxy es de 10 por minuto con ráfaga de 5: repetir la verificación enseguida da 429 falsos.
 
+**Tercer despliegue (9-oct-2026).** `8577561` (módulo de asistencia, PR #29 y #30), sin migración: se comparó la VM con el paquete con `diff` (solo difirieron los archivos del módulo) y el código anterior quedó en `~/clickclak-prev-before-8577561`. `verificar-despliegue.sh`: **73 comprobaciones correctas** ([`evidencia/despliegue-main-2026-10-09-asistencia.txt`](evidencia/despliegue-main-2026-10-09-asistencia.txt)).
+
 ## 7. Cómo recrearla
 
 Preparación de la suscripción (una sola vez): registrar los proveedores `Microsoft.Compute`, `Microsoft.Network`, `Microsoft.Storage` y `Microsoft.DevTestLab`.

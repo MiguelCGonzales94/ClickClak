@@ -72,4 +72,4 @@ La suite del backend quedó en **254 pruebas** (245 antes) y la del panel en **5
 - **Sin exportación.** No hay descarga a CSV ni a Excel; el límite de 100 filas por página lo hace impracticable para un reporte mensual. **Recomendación:** un endpoint de exportación con rango obligatorio.
 - **Sin vista para el colaborador.** Quien marca no puede consultar sus propias marcaciones desde la app de campo; sería un endpoint `mias`, como el de incidencias.
 - **Sin mapa integrado.** El enlace abre un sitio externo; no se agregó un mapa propio porque la política de seguridad del proxy bloquea recursos externos.
-- **No se probó en la VM de Azure.**
+- **Probado en la VM de Azure solo por HTTP** (9-oct-2026): `verificar-despliegue.sh` 73/73 y los endpoints del módulo; el recorrido manual de la pantalla contra producción sigue pendiente (CP-X05). Ver [resultados-de-pruebas.md](resultados-de-pruebas.md), 9.8.
