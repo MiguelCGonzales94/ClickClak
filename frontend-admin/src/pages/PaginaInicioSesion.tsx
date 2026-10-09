@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ErrorHttp } from "../services/clienteApi";
 import { servicioAutenticacion } from "../services/servicioAutenticacion";
 import { useSesion } from "../store/ContextoSesion";
@@ -12,6 +12,8 @@ export function PaginaInicioSesion() {
   const [enviando, setEnviando] = useState(false);
   const { iniciarSesion } = useSesion();
   const navegar = useNavigate();
+  // Tras cambiar la contraseña se llega aquí con un mensaje de confirmación (HU04).
+  const mensajeInicial = (useLocation().state as { mensaje?: string } | null)?.mensaje;
 
   async function manejarEnvio(evento: FormEvent) {
     evento.preventDefault();
@@ -21,7 +23,7 @@ export function PaginaInicioSesion() {
       const respuestaLogin = await servicioAutenticacion.iniciarSesion({ correo, password });
       const perfil = await servicioAutenticacion.obtenerPerfil(respuestaLogin.token);
       iniciarSesion({ token: respuestaLogin.token, perfil });
-      navegar("/", { replace: true });
+      navegar(perfil.debeCambiarClave ? "/cambiar-clave" : "/", { replace: true });
     } catch (err) {
       setError(err instanceof ErrorHttp ? err.message : "No se pudo conectar con el servidor");
     } finally {
@@ -81,6 +83,11 @@ export function PaginaInicioSesion() {
               </label>
             </div>
 
+            {mensajeInicial && !error && (
+              <p role="status" className="mt-5 rounded-sm border border-[#6FD6A8]/30 bg-[#0C2A1F] px-3 py-2 text-sm text-[#B9F0D6]">
+                {mensajeInicial}
+              </p>
+            )}
             {error && (
               <p className="mt-5 rounded-sm border border-[#F58989]/30 bg-[#3B1018] px-3 py-2 text-sm text-[#FFC4C4]">
                 {error}

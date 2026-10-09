@@ -17,7 +17,7 @@ interface OpcionesSolicitud {
 }
 
 async function solicitar<T>(
-  metodo: "GET" | "POST" | "PUT",
+  metodo: "GET" | "POST" | "PUT" | "DELETE",
   ruta: string,
   { token, cuerpo }: OpcionesSolicitud = {},
 ): Promise<T> {
@@ -59,4 +59,5 @@ export const clienteApi = {
     solicitar<T>("POST", ruta, { token, cuerpo }),
   put: <T>(ruta: string, cuerpo: unknown, token?: string | null) =>
     solicitar<T>("PUT", ruta, { token, cuerpo }),
+  delete: <T>(ruta: string, token?: string | null) => solicitar<T>("DELETE", ruta, { token }),
 };
