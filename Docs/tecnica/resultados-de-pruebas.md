@@ -268,3 +268,19 @@ Descripción, decisiones y límites en [modulo-asignaciones.md](modulo-asignacio
 **Brechas**
 - **CP-X06, pendiente:** desplegar en la VM y comprobar la migración V4 y los endpoints nuevos. Antes de aplicar V4 conviene un respaldo de la base.
 - La regla de validar contra la sede más cercana no detecta que una persona con dos turnos cruzados debía estar en la otra sede (límite declarado en `modulo-asignaciones.md`).
+
+### 9.10 Zonificación de sedes en el mapa (4-nov-2026)
+
+Descripción, decisiones y límites en [modulo-zonificacion-sedes.md](modulo-zonificacion-sedes.md). **No se desplegó ni se probó en la VM.**
+
+| Prueba | Resultado |
+|---|---|
+| Backend | **288 pruebas, 0 fallos** (283 antes): 5 nuevas de integración en `UbicacionControllerTest` contra la base real |
+| Panel | **82 pruebas Vitest** (68 antes; 14 nuevas en `sedes/reglas.test.ts`); `tsc` y build correctos |
+| Recorrido manual local (CP-M08) | Correcto contra el backend y PostGIS locales: el mapa carga con calles; un clic coloca el marcador y llena latitud y longitud; el radio mueve el círculo en vivo; pegar «-12.046374, -77.042793» reubica el marcador y encuadra el mapa; al guardar, la sede aparece en la tabla con su centro y radio; *Editar zona* se abre con la zona guardada y el servicio bloqueado; arrastrar el marcador y guardar dejó el nuevo punto en PostGIS y las entradas `CREACION` y `MODIFICACION` en la bitácora |
+
+**Brechas**
+- **No se reprodujo el fallo original** («se marcaba una zona pero no se registraba»): el almacenamiento funciona, pero no se tiene el caso exacto de la pantalla antigua.
+- **CP-M08 no cubrió en el navegador** desactivar ni reactivar (sí las pruebas de integración) ni el arrastre con pantalla táctil ni el uso de «Usar mi ubicación».
+- **El mapa no se probó bajo la CSP del proxy.** En desarrollo no hay CSP; que las teselas carguen con `img-src https://tile.openstreetmap.org` queda por comprobar al desplegar la configuración (CP-X07).
+- **Datos de prueba:** quedaron en la base local de desarrollo el servicio «Servicio Prueba Zona» y la sede «Almacén Norte»; sus entradas de bitácora se conservan por diseño.

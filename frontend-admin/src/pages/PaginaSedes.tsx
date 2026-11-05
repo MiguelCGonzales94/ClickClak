@@ -1,21 +1,22 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Campo } from "../components/Campo";
+import { Modal } from "../components/Modal";
 import { EstadoPill, Tabla } from "../components/Tabla";
 import { ErrorHttp } from "../services/clienteApi";
 import { servicioProyectos } from "../services/servicioProyectos";
 import { servicioUbicaciones } from "../services/servicioUbicaciones";
 import { useSesion } from "../store/ContextoSesion";
+import { FormularioSede } from "../sedes/FormularioSede";
+import { formatearCoordenadas } from "../sedes/reglas";
 import type { RespuestaProyecto, RespuestaUbicacion } from "../types/api";
+import { MenuAcciones, type OpcionMenu } from "../usuarios/MenuAcciones";
 
 const PROYECTO_VACIO = { nombre: "", cliente: "", fechaInicio: "" };
-const UBICACION_VACIA = {
-  proyectoId: "",
-  nombre: "",
-  direccionReferencia: "",
-  latitud: "",
-  longitud: "",
-  radioToleranciaMetros: "150",
-};
+
+type Dialogo =
+  | { tipo: "crear" }
+  | { tipo: "editar"; sede: RespuestaUbicacion }
+  | { tipo: "desactivar"; sede: RespuestaUbicacion };
 
 /** HU06: servicios (proyectos) y sedes/zonas autorizadas (ubicaciones) dentro de cada uno. */
 export function PaginaSedes() {
@@ -25,11 +26,12 @@ export function PaginaSedes() {
   const [cargando, setCargando] = useState(true);
 
   const [formularioProyecto, setFormularioProyecto] = useState(PROYECTO_VACIO);
-  const [formularioUbicacion, setFormularioUbicacion] = useState(UBICACION_VACIA);
   const [errorProyecto, setErrorProyecto] = useState<string | null>(null);
-  const [errorUbicacion, setErrorUbicacion] = useState<string | null>(null);
   const [guardandoProyecto, setGuardandoProyecto] = useState(false);
-  const [guardandoUbicacion, setGuardandoUbicacion] = useState(false);
+  const [dialogo, setDialogo] = useState<Dialogo | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [errorAccion, setErrorAccion] = useState<string | null>(null);
+  const [ejecutando, setEjecutando] = useState(false);
 
   function cargarTodo() {
     if (!token) return;
@@ -60,27 +62,45 @@ export function PaginaSedes() {
     }
   }
 
-  async function manejarCrearUbicacion(evento: FormEvent) {
-    evento.preventDefault();
-    if (!token) return;
-    setErrorUbicacion(null);
-    setGuardandoUbicacion(true);
+  function cerrarDialogo() {
+    setDialogo(null);
+    setErrorAccion(null);
+  }
+
+  function terminar(mensaje: string) {
+    cerrarDialogo();
+    setAviso(mensaje);
+    cargarTodo();
+  }
+
+  async function ejecutar(accion: () => Promise<unknown>, mensaje: string, mensajeError: string) {
+    setEjecutando(true);
+    setErrorAccion(null);
     try {
-      await servicioUbicaciones.registrar(token, {
-        proyectoId: Number(formularioUbicacion.proyectoId),
-        nombre: formularioUbicacion.nombre,
-        direccionReferencia: formularioUbicacion.direccionReferencia || undefined,
-        latitud: Number(formularioUbicacion.latitud),
-        longitud: Number(formularioUbicacion.longitud),
-        radioToleranciaMetros: Number(formularioUbicacion.radioToleranciaMetros),
-      });
-      setFormularioUbicacion(UBICACION_VACIA);
-      cargarTodo();
+      await accion();
+      terminar(mensaje);
     } catch (err) {
-      setErrorUbicacion(err instanceof ErrorHttp ? err.message : "No se pudo guardar la sede");
+      setErrorAccion(err instanceof ErrorHttp ? err.message : mensajeError);
     } finally {
-      setGuardandoUbicacion(false);
+      setEjecutando(false);
     }
+  }
+
+  function opcionesDe(sede: RespuestaUbicacion): OpcionMenu[] {
+    if (!token) return [];
+    if (!sede.activo) {
+      return [
+        {
+          etiqueta: "Reactivar",
+          alElegir: () =>
+            ejecutar(() => servicioUbicaciones.reactivar(token, sede.id), `Se reactivó ${sede.nombre}.`, "No se pudo reactivar la sede"),
+        },
+      ];
+    }
+    return [
+      { etiqueta: "Editar zona", alElegir: () => setDialogo({ tipo: "editar", sede }) },
+      { etiqueta: "Desactivar", peligro: true, alElegir: () => setDialogo({ tipo: "desactivar", sede }) },
+    ];
   }
 
   function nombreProyecto(proyectoId: number) {
@@ -135,67 +155,114 @@ export function PaginaSedes() {
         </section>
 
         <section className="flex flex-col gap-4">
-          <h2 className="text-sm font-bold text-textoSuave uppercase tracking-wide">Sedes y zonas autorizadas</h2>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-bold text-textoSuave uppercase tracking-wide">Sedes y zonas autorizadas</h2>
+            <button
+              onClick={() => setDialogo({ tipo: "crear" })}
+              disabled={proyectos.length === 0}
+              title={proyectos.length === 0 ? "Registre primero un servicio" : undefined}
+              className="h-9 px-4 rounded-sm bg-primario text-white text-sm font-semibold hover:bg-primarioOscuro disabled:opacity-60 transition-colors"
+            >
+              + Nueva sede
+            </button>
+          </div>
 
-          <form onSubmit={manejarCrearUbicacion} className="bg-superficie rounded-md shadow-tarjeta p-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Campo etiqueta="Servicio">
-              <select required value={formularioUbicacion.proyectoId} onChange={(e) => setFormularioUbicacion({ ...formularioUbicacion, proyectoId: e.target.value })} className="campo">
-                <option value="" disabled>
-                  Selecciona un servicio
-                </option>
-                {proyectos.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nombre}
-                  </option>
-                ))}
-              </select>
-            </Campo>
-            <Campo etiqueta="Nombre de la sede">
-              <input required value={formularioUbicacion.nombre} onChange={(e) => setFormularioUbicacion({ ...formularioUbicacion, nombre: e.target.value })} className="campo" />
-            </Campo>
-            <Campo etiqueta="Referencia (opcional)">
-              <input value={formularioUbicacion.direccionReferencia} onChange={(e) => setFormularioUbicacion({ ...formularioUbicacion, direccionReferencia: e.target.value })} className="campo" />
-            </Campo>
-            <Campo etiqueta="Latitud">
-              <input required type="number" step="any" value={formularioUbicacion.latitud} onChange={(e) => setFormularioUbicacion({ ...formularioUbicacion, latitud: e.target.value })} className="campo" />
-            </Campo>
-            <Campo etiqueta="Longitud">
-              <input required type="number" step="any" value={formularioUbicacion.longitud} onChange={(e) => setFormularioUbicacion({ ...formularioUbicacion, longitud: e.target.value })} className="campo" />
-            </Campo>
-            <Campo etiqueta="Radio de tolerancia (m)">
-              <input required type="number" min={1} value={formularioUbicacion.radioToleranciaMetros} onChange={(e) => setFormularioUbicacion({ ...formularioUbicacion, radioToleranciaMetros: e.target.value })} className="campo" />
-            </Campo>
-
-            {errorUbicacion && (
-              <p className="sm:col-span-3 text-sm text-peligroTexto bg-peligroFondo border border-peligro/30 rounded-sm px-3 py-2">
-                {errorUbicacion}
-              </p>
-            )}
-
-            <div className="sm:col-span-3">
-              <button
-                type="submit"
-                disabled={guardandoUbicacion}
-                className="h-10 px-5 rounded-sm bg-primario text-white text-sm font-semibold hover:bg-primarioOscuro disabled:opacity-60 transition-colors"
-              >
-                {guardandoUbicacion ? "Guardando…" : "+ Sede"}
+          {aviso && (
+            <p
+              role="status"
+              className="flex items-center justify-between gap-3 rounded-sm border border-exito/30 bg-exitoFondo px-3 py-2 text-sm text-exitoTexto"
+            >
+              {aviso}
+              <button onClick={() => setAviso(null)} aria-label="Cerrar aviso" className="text-lg leading-none">
+                ×
               </button>
-            </div>
-          </form>
+            </p>
+          )}
+          {errorAccion && dialogo === null && (
+            <p role="alert" className="rounded-sm border border-peligro/30 bg-peligroFondo px-3 py-2 text-sm text-peligroTexto">
+              {errorAccion}
+            </p>
+          )}
 
           <Tabla
             cargando={cargando}
             vacio="No hay sedes registradas todavía."
-            columnas={["Sede", "Servicio", "Radio (m)", "Estado"]}
+            columnas={["Sede", "Servicio", "Centro de la zona", "Radio (m)", "Estado", ""]}
             filas={ubicaciones.map((u) => [
-              u.nombre,
+              <div key="sede">
+                <p className="font-medium">{u.nombre}</p>
+                {u.direccionReferencia && <p className="text-xs text-textoSuave">{u.direccionReferencia}</p>}
+              </div>,
               nombreProyecto(u.proyectoId),
+              <span key="centro" className="font-mono text-xs">
+                {formatearCoordenadas(u.latitud, u.longitud)}
+              </span>,
               String(u.radioToleranciaMetros),
               <EstadoPill key="estado" activo={u.activo} />,
+              <div key="acciones" className="text-right">
+                <MenuAcciones etiqueta={`Acciones de la sede ${u.nombre}`} opciones={opcionesDe(u)} />
+              </div>,
             ])}
           />
         </section>
       </main>
+      {dialogo?.tipo === "crear" && token && (
+        <Modal titulo="Nueva sede" ancho="lg" onCerrar={cerrarDialogo}>
+          <FormularioSede
+            token={token}
+            proyectos={proyectos}
+            ubicaciones={ubicaciones}
+            alCancelar={cerrarDialogo}
+            alGuardar={(creada) => terminar(`Se registró la sede ${creada.nombre}.`)}
+          />
+        </Modal>
+      )}
+
+      {dialogo?.tipo === "editar" && token && (
+        <Modal titulo={`Editar zona de ${dialogo.sede.nombre}`} ancho="lg" onCerrar={cerrarDialogo}>
+          <FormularioSede
+            token={token}
+            sede={dialogo.sede}
+            proyectos={proyectos}
+            ubicaciones={ubicaciones}
+            alCancelar={cerrarDialogo}
+            alGuardar={(guardada) => terminar(`Se guardaron los cambios de ${guardada.nombre}.`)}
+          />
+        </Modal>
+      )}
+
+      {dialogo?.tipo === "desactivar" && token && (
+        <Modal titulo="Desactivar sede" onCerrar={cerrarDialogo}>
+          <p className="text-sm text-texto">
+            <strong>{dialogo.sede.nombre}</strong> ({nombreProyecto(dialogo.sede.proyectoId)}) dejará de estar disponible
+            para nuevas asignaciones. Las marcaciones ya registradas se conservan y puede reactivarla cuando quiera. Si
+            hay técnicos asignados a esta sede, primero hay que moverlos o quitarlos.
+          </p>
+          {errorAccion && (
+            <p role="alert" className="mt-3 rounded-sm border border-peligro/30 bg-peligroFondo px-3 py-2 text-sm text-peligroTexto">
+              {errorAccion}
+            </p>
+          )}
+          <div className="mt-5 flex justify-end gap-3">
+            <button onClick={cerrarDialogo} className="h-10 rounded-sm border border-borde px-4 text-sm font-semibold text-texto hover:bg-fondo">
+              Cancelar
+            </button>
+            <button
+              disabled={ejecutando}
+              onClick={() =>
+                ejecutar(
+                  () => servicioUbicaciones.desactivar(token, dialogo.sede.id),
+                  `Se desactivó ${dialogo.sede.nombre}.`,
+                  "No se pudo desactivar la sede",
+                )
+              }
+              className="h-10 rounded-sm bg-peligro px-4 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
+            >
+              {ejecutando ? "Desactivando…" : "Desactivar"}
+            </button>
+          </div>
+        </Modal>
+      )}
     </>
   );
 }
