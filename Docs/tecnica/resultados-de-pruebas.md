@@ -266,7 +266,7 @@ Descripción, decisiones y límites en [modulo-asignaciones.md](modulo-asignacio
 **Hallazgo corregido de paso.** Una asignación ya terminada se mostraba como *Vigente* en el panel y el tablero la contaba como vigente. Se nota ahora porque por primera vez se pueden terminar. Antes de este cambio, además, crear una asignación no dejaba rastro en la bitácora.
 
 **Brechas**
-- **CP-X06, resuelto el 9-oct-2026** (ver 9.9.1). Sigue pendiente el recorrido manual de la pantalla de asignaciones contra producción (CP-X08).
+- **CP-X06, resuelto el 9-oct-2026** (ver 9.9.1). Sigue pendiente el recorrido manual de la pantalla de asignaciones contra producción (CP-X07).
 - La regla de validar contra la sede más cercana no detecta que una persona con dos turnos cruzados debía estar en la otra sede (límite declarado en `modulo-asignaciones.md`).
 
 #### 9.9.1 Despliegue en la VM de Azure (9-oct-2026, `dc1d0ff`)
@@ -285,7 +285,7 @@ Descripción, decisiones y límites en [modulo-asignaciones.md](modulo-asignacio
 
 ### 9.10 Zonificación de sedes en el mapa (4-nov-2026)
 
-Descripción, decisiones y límites en [modulo-zonificacion-sedes.md](modulo-zonificacion-sedes.md). **No se desplegó ni se probó en la VM.**
+Descripción, decisiones y límites en [modulo-zonificacion-sedes.md](modulo-zonificacion-sedes.md). PR #34, fusionado y desplegado en la VM con `03b8af9` (ver 9.10.1).
 
 | Prueba | Resultado |
 |---|---|
@@ -296,5 +296,20 @@ Descripción, decisiones y límites en [modulo-zonificacion-sedes.md](modulo-zon
 **Brechas**
 - **No se reprodujo el fallo original** («se marcaba una zona pero no se registraba»): el almacenamiento funciona, pero no se tiene el caso exacto de la pantalla antigua.
 - **CP-M08 no cubrió en el navegador** desactivar ni reactivar (sí las pruebas de integración) ni el arrastre con pantalla táctil ni el uso de «Usar mi ubicación».
-- **El mapa no se probó bajo la CSP del proxy.** En desarrollo no hay CSP; que las teselas carguen con `img-src https://tile.openstreetmap.org` queda por comprobar al desplegar la configuración (CP-X08).
+- **El mapa no se probó bajo la CSP del proxy en desarrollo** (allí no hay CSP); se comprobó después en producción, ver 9.10.1. Queda pendiente el recorrido completo con sesión iniciada (CP-X08).
 - **Datos de prueba:** quedaron en la base local de desarrollo el servicio «Servicio Prueba Zona» y la sede «Almacén Norte»; sus entradas de bitácora se conservan por diseño.
+
+#### 9.10.1 Despliegue en la VM de Azure (5-nov-2026, `03b8af9`)
+
+| Prueba | Resultado |
+|---|---|
+| Fusión | PR #33 (documentación) y luego PR #34, con el CI en verde (backend, panel e infra). Se resolvieron conflictos de documentación contra `main` y la prueba del mapa pasó de CP-X07 a CP-X08 |
+| Paquete y comparación | `git archive` del árbol (SHA-256 `e605e04a…dc23a`, igual en el equipo y en la VM); el `diff` contra la VM mostró solo la zonificación, el panel, la plantilla de la CSP y la documentación. El código anterior quedó en `~/clickclak-prev-before-03b8af9` |
+| Migración | Ninguna. No se hizo respaldo con `pg_dump` porque no cambia el esquema; Postgres y su réplica no se reiniciaron |
+| `verificar-despliegue.sh` | **73 comprobaciones correctas, 0 fallos**. Salida en [`evidencia/despliegue-main-2026-11-05-zonificacion.txt`](evidencia/despliegue-main-2026-11-05-zonificacion.txt) |
+| CSP desde fuera | Los puertos 443 y 8443 sirven `img-src 'self' data: https://tile.openstreetmap.org`; el resto de la política no cambió |
+| Endpoints nuevos en la VM | Con token: listado 200; editar, eliminar y reactivar una sede inexistente, 404; editar con latitud fuera de rango, 400; editar sin token, 401. No se creó ningún dato |
+| Mapa bajo la CSP real (navegador) | Desde la página del panel en producción, una tesela de `tile.openstreetmap.org` carga (256×256) y una imagen de otro host queda bloqueada por `img-src`; el paquete publicado contiene la dirección del servidor de teselas |
+
+**Lo que no prueba.** No se inició sesión en el panel de producción: no se recorrió la pantalla (marcar, arrastrar, guardar, editar, desactivar) con datos reales, que es lo que cubre CP-X08. Se desplegó en horario de la VM encendida a mano: se había apagado a las 23:00 y hubo que volver a encenderla.
+
