@@ -171,7 +171,8 @@ La medición ya incluye la réplica de Postgres. **No incluye** Prometheus ni Gr
 
 Insumo para la retrospectiva del Sprint 4:
 
-1. **El build del backend falló con `./mvnw: not found`.** Con `core.autocrlf=true`, Windows entrega los archivos con CRLF y el `` rompe el shebang. Se agregó `.gitattributes` con LF para scripts, Dockerfile y configuración de contenedores.
+1. **El build del backend falló con `./mvnw: not found`.** Con `core.autocrlf=true`, Windows entrega los archivos con CRLF y el `
+` rompe el shebang. Se agregó `.gitattributes` con LF para scripts, Dockerfile y configuración de contenedores.
 2. **El proxy se reiniciaba en bucle con `unknown "ruta_cert" variable`.** El entrypoint de Nginx ignora los archivos `.envsh` sin permiso de ejecución. Se marcó el bit `+x` en git y el script de despliegue lo reafirma.
 3. **El script del administrador abortaba en su primera consulta.** `psql -c` no interpola variables; el SQL pasó a la entrada estándar.
 
@@ -182,6 +183,10 @@ Insumo para la retrospectiva del Sprint 4:
 **Actualización (9-oct-2026).** Se desplegó dos veces más desde `main`, con el mismo procedimiento: `b5e429f` (módulo de usuarios completo, PR #21 a #26) y `a35f19e` (PR #27, codificación de los mensajes 401 y 403). Antes del primero se hizo un respaldo con `pg_dump` en `~/respaldos/` y se aplicó la migración V3; antes de cada paquete se comparó la VM con él con `diff` (así se detectó que `main` no tenía los cambios de #21, que la VM ya corría). Los directorios anteriores quedaron en `~/clickclak-prev-before-b5e429f` y `~/clickclak-prev-before-a35f19e`. Resultado: `verificar-despliegue.sh` con **73 comprobaciones correctas** (ver [resultados-de-pruebas.md](resultados-de-pruebas.md), 9.7, y [`evidencia/despliegue-main-2026-10-09.txt`](evidencia/despliegue-main-2026-10-09.txt)). El cupo de login del proxy es de 10 por minuto con ráfaga de 5: repetir la verificación enseguida da 429 falsos.
 
 **Tercer despliegue (9-oct-2026).** `8577561` (módulo de asistencia, PR #29 y #30), sin migración: se comparó la VM con el paquete con `diff` (solo difirieron los archivos del módulo) y el código anterior quedó en `~/clickclak-prev-before-8577561`. `verificar-despliegue.sh`: **73 comprobaciones correctas** ([`evidencia/despliegue-main-2026-10-09-asistencia.txt`](evidencia/despliegue-main-2026-10-09-asistencia.txt)).
+
+**Cuarto despliegue (9-oct-2026).** `dc1d0ff` (asignaciones con varias sedes, PR #32), **con migración V4**: antes de aplicarla se hizo un respaldo con `pg_dump` en `~/respaldos/clickclak-antes-de-dc1d0ff.sql`, y se comparó la VM con el paquete con `diff` (solo difirieron los archivos del módulo y la documentación). El código anterior quedó en `~/clickclak-prev-before-dc1d0ff`. `verificar-despliegue.sh`: **73 comprobaciones correctas** ([`evidencia/despliegue-main-2026-10-09-asignaciones.txt`](evidencia/despliegue-main-2026-10-09-asignaciones.txt)). **Para volver atrás** habría que restaurar también el respaldo de la base: V4 relajó una restricción y, una vez que haya técnicos con varias sedes a la vez, la anterior ya no se podría restablecer sobre esos datos.
+
+**Quinto despliegue (5-nov-2026).** `03b8af9` (zonificación de sedes en el mapa, PR #34, y la documentación del PR #33), **sin migración**: no se hizo `pg_dump` porque el esquema no cambia, y Postgres y su réplica no se reiniciaron. Se comparó la VM con el paquete con `diff` y el código anterior quedó en `~/clickclak-prev-before-03b8af9`. **El proxy se recreó** para tomar la CSP nueva (`img-src` admite `https://tile.openstreetmap.org`). `verificar-despliegue.sh`: **73 comprobaciones correctas** ([`evidencia/despliegue-main-2026-11-05-zonificacion.txt`](evidencia/despliegue-main-2026-11-05-zonificacion.txt)). La VM se había apagado a las 23:00 y se encendió a mano para desplegar.
 
 ## 7. Cómo recrearla
 

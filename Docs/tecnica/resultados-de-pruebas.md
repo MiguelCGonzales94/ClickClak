@@ -253,7 +253,7 @@ Cierra el hallazgo H-09. PR #29 (backend) y #30 (panel), fusionados y desplegado
 
 ### 9.9 Asignaciones con varias sedes (9-oct-2026)
 
-Descripción, decisiones y límites en [modulo-asignaciones.md](modulo-asignaciones.md). **No se desplegó ni se probó en la VM.**
+Descripción, decisiones y límites en [modulo-asignaciones.md](modulo-asignaciones.md). PR #32, fusionado y desplegado en la VM con `dc1d0ff` (ver 9.9.1).
 
 | Prueba | Resultado |
 |---|---|
@@ -266,12 +266,26 @@ Descripción, decisiones y límites en [modulo-asignaciones.md](modulo-asignacio
 **Hallazgo corregido de paso.** Una asignación ya terminada se mostraba como *Vigente* en el panel y el tablero la contaba como vigente. Se nota ahora porque por primera vez se pueden terminar. Antes de este cambio, además, crear una asignación no dejaba rastro en la bitácora.
 
 **Brechas**
-- **CP-X06, pendiente:** desplegar en la VM y comprobar la migración V4 y los endpoints nuevos. Antes de aplicar V4 conviene un respaldo de la base.
+- **CP-X06, resuelto el 9-oct-2026** (ver 9.9.1). Sigue pendiente el recorrido manual de la pantalla de asignaciones contra producción (CP-X07).
 - La regla de validar contra la sede más cercana no detecta que una persona con dos turnos cruzados debía estar en la otra sede (límite declarado en `modulo-asignaciones.md`).
+
+#### 9.9.1 Despliegue en la VM de Azure (9-oct-2026, `dc1d0ff`)
+
+| Prueba | Resultado |
+|---|---|
+| Fusión | PR #32 con el CI en verde (backend y panel); `main` no había cambiado desde la rama |
+| Respaldo previo | `pg_dump` de la base (50 KB, 13 tablas, la única asignación incluida) en `~/respaldos/clickclak-antes-de-dc1d0ff.sql` de la VM, antes de aplicar V4 |
+| Paquete y comparación | El SHA-256 coincide entre el equipo y la VM; la comparación con `diff` mostró solo los archivos de asignaciones, V4 y documentación. El código anterior quedó en `~/clickclak-prev-before-dc1d0ff` |
+| Migración | Flyway en la **versión 4** (`asignaciones varias sedes`, exitosa); la única restricción de asignaciones es `ex_asignacion_misma_sede_sin_solapamiento`; los datos quedaron intactos (1 asignación, 5 usuarios) |
+| `verificar-despliegue.sh` | **73 comprobaciones correctas, 0 fallos**. Salida en [`evidencia/despliegue-main-2026-10-09-asignaciones.txt`](evidencia/despliegue-main-2026-10-09-asignaciones.txt) |
+| La regla en la base de producción | Dentro de una transacción que se revirtió sin dejar datos: el mismo colaborador con **dos sedes a la vez** se permite, y repetir la **misma sede** con fechas cruzadas se rechaza con `ex_asignacion_misma_sede_sin_solapamiento` |
+| Endpoints en la VM | Sin token 401; el listado devuelve el estado calculado; editar, quitar y mover una asignación inexistente responden 404; mover con cuerpo inválido, 400; la agenda propia y la ruta `/asignaciones` del panel responden 200 |
+
+**Lo que no prueba.** En producción no se crearon, movieron ni quitaron asignaciones reales: para no dejar datos de prueba, esas operaciones se cubrieron con las pruebas automáticas, el recorrido local y la prueba de la regla en la base. Tampoco se probó la validación de una marcación con varias sedes contra el motor real en la VM.
 
 ### 9.10 Zonificación de sedes, CRUD de sedes y servicios, puntualidad y dirección del punto (4 y 5-nov-2026)
 
-Descripción, decisiones y límites en [modulo-zonificacion-sedes.md](modulo-zonificacion-sedes.md). **No se desplegó ni se probó en la VM.**
+Descripción, decisiones y límites en [modulo-zonificacion-sedes.md](modulo-zonificacion-sedes.md). PR #34, fusionado y desplegado en la VM con `03b8af9` (ver 9.10.1).
 
 | Prueba | Resultado |
 |---|---|
@@ -283,8 +297,23 @@ Descripción, decisiones y límites en [modulo-zonificacion-sedes.md](modulo-zon
 
 **Brechas**
 - **No se reprodujo el fallo original** («se marcaba una zona pero no se registraba»): el almacenamiento funciona, pero no se tiene el caso exacto de la pantalla antigua.
-- **La dirección depende de OpenStreetMap.** La prueba manual llamó al servicio real desde el backend local; el despliegue necesita que la VM tenga salida HTTPS a `nominatim.openstreetmap.org` (se verificará en CP-X07). En el centro de Lima el servicio devolvió solo «Lima».
+- **La dirección depende de OpenStreetMap.** La prueba manual llamó al servicio real desde el backend local; el despliegue necesita que la VM tenga salida HTTPS a `nominatim.openstreetmap.org` (se verificará en CP-X09). En el centro de Lima el servicio devolvió solo «Lima».
 - **La puntualidad en turnos nocturnos no se probó con datos reales** (solo con la prueba unitaria); no hay turnos que crucen la medianoche cargados.
 - **No se recorrió en el navegador** desactivar ni reactivar (sí las pruebas de integración) ni el arrastre con pantalla táctil ni el uso de «Usar mi ubicación».
-- **El mapa no se probó bajo la CSP del proxy.** En desarrollo no hay CSP; que las teselas carguen con `img-src https://tile.openstreetmap.org` queda por comprobar al desplegar la configuración (CP-X07).
 - **Datos de prueba:** quedó en la base local de desarrollo el servicio «Servicio Prueba Zona» (la sede «Almacén Norte» y «Servicio Borrable» se eliminaron en la prueba); las entradas de bitácora se conservan por diseño.
+- **El mapa bajo la CSP del proxy** se comprobó después en producción (ver 9.10.1); queda pendiente el recorrido completo con sesión iniciada (CP-X08).
+
+#### 9.10.1 Despliegue en la VM de Azure (5-nov-2026, `03b8af9`)
+
+| Prueba | Resultado |
+|---|---|
+| Fusión | PR #33 (documentación) y luego PR #34, con el CI en verde (backend, panel e infra). Se resolvieron conflictos de documentación contra `main` y la prueba del mapa pasó de CP-X07 a CP-X08 |
+| Paquete y comparación | `git archive` del árbol (SHA-256 `e605e04a…dc23a`, igual en el equipo y en la VM); el `diff` contra la VM mostró solo la zonificación, el panel, la plantilla de la CSP y la documentación. El código anterior quedó en `~/clickclak-prev-before-03b8af9` |
+| Migración | Ninguna. No se hizo respaldo con `pg_dump` porque no cambia el esquema; Postgres y su réplica no se reiniciaron |
+| `verificar-despliegue.sh` | **73 comprobaciones correctas, 0 fallos**. Salida en [`evidencia/despliegue-main-2026-11-05-zonificacion.txt`](evidencia/despliegue-main-2026-11-05-zonificacion.txt) |
+| CSP desde fuera | Los puertos 443 y 8443 sirven `img-src 'self' data: https://tile.openstreetmap.org`; el resto de la política no cambió |
+| Endpoints nuevos en la VM | Con token: listado 200; editar, eliminar y reactivar una sede inexistente, 404; editar con latitud fuera de rango, 400; editar sin token, 401. No se creó ningún dato |
+| Mapa bajo la CSP real (navegador) | Desde la página del panel en producción, una tesela de `tile.openstreetmap.org` carga (256×256) y una imagen de otro host queda bloqueada por `img-src`; el paquete publicado contiene la dirección del servidor de teselas |
+
+**Lo que no prueba.** No se inició sesión en el panel de producción: no se recorrió la pantalla (marcar, arrastrar, guardar, editar, desactivar) con datos reales, que es lo que cubre CP-X08. Se desplegó en horario de la VM encendida a mano: se había apagado a las 23:00 y hubo que volver a encenderla.
+
