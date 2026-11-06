@@ -181,6 +181,14 @@ export interface SolicitudRegistrarUbicacion {
   radioToleranciaMetros?: number;
 }
 
+export interface SolicitudEditarUbicacion {
+  nombre: string;
+  direccionReferencia?: string;
+  latitud: number;
+  longitud: number;
+  radioToleranciaMetros: number;
+}
+
 export interface RespuestaHorario {
   id: number;
   nombre: string;

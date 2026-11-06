@@ -266,7 +266,7 @@ Descripción, decisiones y límites en [modulo-asignaciones.md](modulo-asignacio
 **Hallazgo corregido de paso.** Una asignación ya terminada se mostraba como *Vigente* en el panel y el tablero la contaba como vigente. Se nota ahora porque por primera vez se pueden terminar. Antes de este cambio, además, crear una asignación no dejaba rastro en la bitácora.
 
 **Brechas**
-- **CP-X06, resuelto el 9-oct-2026** (ver 9.9.1). Sigue pendiente el recorrido manual de la pantalla de asignaciones contra producción (CP-X07).
+- **CP-X06, resuelto el 9-oct-2026** (ver 9.9.1). Sigue pendiente el recorrido manual de la pantalla de asignaciones contra producción (CP-X08).
 - La regla de validar contra la sede más cercana no detecta que una persona con dos turnos cruzados debía estar en la otra sede (límite declarado en `modulo-asignaciones.md`).
 
 #### 9.9.1 Despliegue en la VM de Azure (9-oct-2026, `dc1d0ff`)
@@ -282,3 +282,19 @@ Descripción, decisiones y límites en [modulo-asignaciones.md](modulo-asignacio
 | Endpoints en la VM | Sin token 401; el listado devuelve el estado calculado; editar, quitar y mover una asignación inexistente responden 404; mover con cuerpo inválido, 400; la agenda propia y la ruta `/asignaciones` del panel responden 200 |
 
 **Lo que no prueba.** En producción no se crearon, movieron ni quitaron asignaciones reales: para no dejar datos de prueba, esas operaciones se cubrieron con las pruebas automáticas, el recorrido local y la prueba de la regla en la base. Tampoco se probó la validación de una marcación con varias sedes contra el motor real en la VM.
+
+### 9.10 Zonificación de sedes en el mapa (4-nov-2026)
+
+Descripción, decisiones y límites en [modulo-zonificacion-sedes.md](modulo-zonificacion-sedes.md). **No se desplegó ni se probó en la VM.**
+
+| Prueba | Resultado |
+|---|---|
+| Backend | **288 pruebas, 0 fallos** (283 antes): 5 nuevas de integración en `UbicacionControllerTest` contra la base real |
+| Panel | **82 pruebas Vitest** (68 antes; 14 nuevas en `sedes/reglas.test.ts`); `tsc` y build correctos |
+| Recorrido manual local (CP-M08) | Correcto contra el backend y PostGIS locales: el mapa carga con calles; un clic coloca el marcador y llena latitud y longitud; el radio mueve el círculo en vivo; pegar «-12.046374, -77.042793» reubica el marcador y encuadra el mapa; al guardar, la sede aparece en la tabla con su centro y radio; *Editar zona* se abre con la zona guardada y el servicio bloqueado; arrastrar el marcador y guardar dejó el nuevo punto en PostGIS y las entradas `CREACION` y `MODIFICACION` en la bitácora |
+
+**Brechas**
+- **No se reprodujo el fallo original** («se marcaba una zona pero no se registraba»): el almacenamiento funciona, pero no se tiene el caso exacto de la pantalla antigua.
+- **CP-M08 no cubrió en el navegador** desactivar ni reactivar (sí las pruebas de integración) ni el arrastre con pantalla táctil ni el uso de «Usar mi ubicación».
+- **El mapa no se probó bajo la CSP del proxy.** En desarrollo no hay CSP; que las teselas carguen con `img-src https://tile.openstreetmap.org` queda por comprobar al desplegar la configuración (CP-X08).
+- **Datos de prueba:** quedaron en la base local de desarrollo el servicio «Servicio Prueba Zona» y la sede «Almacén Norte»; sus entradas de bitácora se conservan por diseño.

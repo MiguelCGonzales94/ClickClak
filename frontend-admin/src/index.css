@@ -9,6 +9,15 @@
   }
 }
 
+/* Marcador del centro de la zona en el mapa de sedes (Leaflet lo usa como divIcon, sin imágenes). */
+.pin-zona {
+  background: #1e4fd8;
+  border: 3px solid #ffffff;
+  border-radius: 9999px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
+  cursor: grab;
+}
+
 /* Línea de escaneo del panel de huella en el login — ver PaginaInicioSesion. */
 @keyframes escaneo-huella {
   0%,

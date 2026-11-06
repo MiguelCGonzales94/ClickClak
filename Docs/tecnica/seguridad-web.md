@@ -22,7 +22,7 @@ Activos a proteger, en orden de importancia: los datos de asistencia y ubicació
 |---|---|---|---|
 | C1 | **TLS 1.2 y 1.3** con suites modernas y sin tickets de sesión; HTTP redirige a HTTPS | Proxy | `verificar-despliegue.sh`: redirección 301 |
 | C2 | **Cabeceras de seguridad**: `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy` (GPS solo del propio origen), `Cross-Origin-Opener-Policy` | Proxy | Verificación: las cuatro primeras presentes en 443 y 8443 (`Cross-Origin-Opener-Policy` está configurada pero el script no la comprueba) |
-| C3 | **CSP estricta**: `default-src 'self'`, sin scripts ni recursos externos, `frame-ancestors 'none'` | Proxy | Prueba en navegador (sección 4.3) |
+| C3 | **CSP estricta**: `default-src 'self'`, sin scripts ni conexiones externas, `frame-ancestors 'none'`. **Única excepción (4-nov-2026):** `img-src` admite `https://tile.openstreetmap.org` para el mapa de sedes del panel (ver [modulo-zonificacion-sedes.md](modulo-zonificacion-sedes.md)) | Proxy | Prueba en navegador (sección 4.3) |
 | C4 | **HSTS**, activado solo con certificado real | Proxy | Verificación: presente en 443 y 8443 con Let's Encrypt; `max-age=31536000` |
 | C5 | **Límite de peticiones por IP**: login y WebAuthn 10/min (ráfaga 5), recuperación de clave 6/min (ráfaga 3), API 20/s | Proxy | Verificación: la ráfaga a la recuperación recibe 429 |
 | C6 | **Superficie mínima**: `/actuator` y archivos ocultos no se enrutan, métodos limitados, cuerpos de máximo 1 MiB, plazos cortos contra conexiones lentas | Proxy | Verificación: 404 en `/actuator/*`, `/.env`, `/.git/config`; 405 en `TRACE` |

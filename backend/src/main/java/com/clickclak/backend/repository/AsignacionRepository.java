@@ -32,4 +32,13 @@ public interface AsignacionRepository extends JpaRepository<Asignacion, Long> {
 
     /** La vista de supervisión no muestra las asignaciones quitadas (baja lógica). */
     List<Asignacion> findByActivoTrueOrderByFechaInicioDesc();
+
+    /** ¿Alguna asignación activa usa esta sede hoy o más adelante? Impide desactivarla. */
+    @Query("""
+        SELECT COUNT(a) > 0 FROM Asignacion a
+        WHERE a.ubicacion.id = :ubicacionId
+          AND a.activo = true
+          AND (a.fechaFin IS NULL OR a.fechaFin >= :hoy)
+        """)
+    boolean existeAsignacionVigenteOProgramada(@Param("ubicacionId") Long ubicacionId, @Param("hoy") LocalDate hoy);
 }
