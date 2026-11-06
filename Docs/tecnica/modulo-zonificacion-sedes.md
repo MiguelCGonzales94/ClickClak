@@ -62,4 +62,4 @@ Sección **Sedes y servicios** del panel (SUPERVISOR y RRHH_ADMIN).
 - **No hay búsqueda de direcciones.** Para ubicar un lugar hay que acercarse con el mapa o pegar coordenadas; una búsqueda necesitaría abrir también `connect-src` a un geocodificador.
 - **Marcar bien el centro sigue siendo responsabilidad de quien lo coloca.** El mapa lo hace visible, pero no impide ubicar una sede donde no corresponde.
 - **El radio máximo es 5000 m** (límite del servidor); el deslizador llega a 1000 m por comodidad.
-- **No se probó en la VM de Azure.**
+- **Desplegado en la VM el 5-nov-2026** (`03b8af9`, sin migración). La política y las teselas se comprobaron en producción; el recorrido de la pantalla con sesión iniciada sigue pendiente (CP-X08). Ver [resultados-de-pruebas.md](resultados-de-pruebas.md), 9.10.1.
