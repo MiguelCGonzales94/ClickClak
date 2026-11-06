@@ -32,6 +32,7 @@ public final class EspecificacionesMarcacion {
                 var asignacion = raiz.fetch("asignacion", JoinType.LEFT);
                 asignacion.fetch("ubicacion", JoinType.LEFT);
                 asignacion.fetch("proyecto", JoinType.LEFT);
+                asignacion.fetch("horario", JoinType.LEFT);
                 raiz.fetch("dispositivo", JoinType.INNER);
             }
             return constructor.conjunction();

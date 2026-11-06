@@ -41,4 +41,18 @@ public interface AsignacionRepository extends JpaRepository<Asignacion, Long> {
           AND (a.fechaFin IS NULL OR a.fechaFin >= :hoy)
         """)
     boolean existeAsignacionVigenteOProgramada(@Param("ubicacionId") Long ubicacionId, @Param("hoy") LocalDate hoy);
+
+    /** Lo mismo para un servicio completo: ¿alguna asignación activa en curso o futura lo usa? */
+    @Query("""
+        SELECT COUNT(a) > 0 FROM Asignacion a
+        WHERE a.proyecto.id = :proyectoId
+          AND a.activo = true
+          AND (a.fechaFin IS NULL OR a.fechaFin >= :hoy)
+        """)
+    boolean existeAsignacionVigenteOProgramadaEnProyecto(@Param("proyectoId") Long proyectoId, @Param("hoy") LocalDate hoy);
+
+    /** Cualquier asignación (activa o quitada) cuenta como historial: las marcaciones cuelgan de ellas. */
+    boolean existsByUbicacionId(Long ubicacionId);
+
+    boolean existsByProyectoId(Long proyectoId);
 }

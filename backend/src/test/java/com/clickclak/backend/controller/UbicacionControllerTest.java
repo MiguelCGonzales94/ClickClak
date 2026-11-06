@@ -143,17 +143,60 @@ class UbicacionControllerTest {
                 .ubicacion(ubicacionRepository.findById(ocupada).orElseThrow()).horario(turno)
                 .fechaInicio(LocalDate.of(2020, 1, 1)).build());
 
-        mockMvc.perform(delete("/api/ubicaciones/" + ocupada).header("Authorization", bearer(admin)))
+        mockMvc.perform(post("/api/ubicaciones/" + ocupada + "/desactivar").header("Authorization", bearer(admin)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("asignaciones")));
 
-        mockMvc.perform(delete("/api/ubicaciones/" + libre).header("Authorization", bearer(admin)))
+        mockMvc.perform(post("/api/ubicaciones/" + libre + "/desactivar").header("Authorization", bearer(admin)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.activo").value(false));
 
         mockMvc.perform(post("/api/ubicaciones/" + libre + "/reactivar").header("Authorization", bearer(admin)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.activo").value(true));
+    }
+
+    @Test
+    void eliminar_soloSiNingunaAsignacionUsoLaSede() throws Exception {
+        Usuario admin = crearUsuario("ubi.elim", Rol.RRHH_ADMIN, "98");
+        Usuario tecnico = crearUsuario("ubi.elim.tec", Rol.COLABORADOR, "99");
+        Proyecto proyecto = crearProyecto("elim");
+        Long conHistorial = registrar(admin, proyecto, "Con historial", -12.0464, -77.0428, 150);
+        Long sinHistorial = registrar(admin, proyecto, "Sin historial", -12.1000, -77.0300, 150);
+
+        Horario turno = horarioRepository.save(Horario.builder().nombre("Turno elim")
+                .horaInicio(LocalTime.MIDNIGHT).horaFin(LocalTime.of(23, 59)).toleranciaMinutos(30).build());
+        // Una asignación ya quitada también cuenta como historial: las marcaciones cuelgan de ella.
+        asignacionRepository.save(Asignacion.builder().usuario(tecnico).proyecto(proyecto)
+                .ubicacion(ubicacionRepository.findById(conHistorial).orElseThrow()).horario(turno)
+                .fechaInicio(LocalDate.of(2020, 1, 1)).fechaFin(LocalDate.of(2020, 2, 1)).activo(false).build());
+
+        mockMvc.perform(delete("/api/ubicaciones/" + conHistorial).header("Authorization", bearer(admin)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("desactívela")));
+        assertThat(ubicacionRepository.existsById(conHistorial)).isTrue();
+
+        mockMvc.perform(delete("/api/ubicaciones/" + sinHistorial).header("Authorization", bearer(admin)))
+                .andExpect(status().isNoContent());
+        entityManager.flush();
+        entityManager.clear();
+        assertThat(ubicacionRepository.existsById(sinHistorial)).isFalse();
+        assertThat(bitacoraRepository.findByEntidadAndEntidadId("ubicacion", sinHistorial))
+                .extracting(e -> e.getAccion().name()).contains("ELIMINACION");
+    }
+
+    @Test
+    void noSePuedeAgregarUnaSedeAUnServicioDesactivado() throws Exception {
+        Usuario admin = crearUsuario("ubi.svcoff", Rol.RRHH_ADMIN, "90");
+        Proyecto proyecto = crearProyecto("svcoff");
+        proyecto.setActivo(false);
+        proyectoRepository.save(proyecto);
+
+        mockMvc.perform(post("/api/ubicaciones").header("Authorization", bearer(admin))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(cuerpoAlta(proyecto, "Sede", -12.0, -77.0, 150)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("desactivado")));
     }
 
     @Test
@@ -172,6 +215,8 @@ class UbicacionControllerTest {
                         .content(cuerpoEdicion("X", -12.0, -77.0, 150)))
                 .andExpect(status().isForbidden());
         mockMvc.perform(delete("/api/ubicaciones/" + id).header("Authorization", bearer(tecnico)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/ubicaciones/" + id + "/desactivar").header("Authorization", bearer(tecnico)))
                 .andExpect(status().isForbidden());
     }
 

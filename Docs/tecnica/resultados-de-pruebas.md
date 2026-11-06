@@ -283,21 +283,25 @@ Descripción, decisiones y límites en [modulo-asignaciones.md](modulo-asignacio
 
 **Lo que no prueba.** En producción no se crearon, movieron ni quitaron asignaciones reales: para no dejar datos de prueba, esas operaciones se cubrieron con las pruebas automáticas, el recorrido local y la prueba de la regla en la base. Tampoco se probó la validación de una marcación con varias sedes contra el motor real en la VM.
 
-### 9.10 Zonificación de sedes en el mapa (4-nov-2026)
+### 9.10 Zonificación de sedes, CRUD de sedes y servicios, puntualidad y dirección del punto (4 y 5-nov-2026)
 
 Descripción, decisiones y límites en [modulo-zonificacion-sedes.md](modulo-zonificacion-sedes.md). PR #34, fusionado y desplegado en la VM con `03b8af9` (ver 9.10.1).
 
 | Prueba | Resultado |
 |---|---|
-| Backend | **288 pruebas, 0 fallos** (283 antes): 5 nuevas de integración en `UbicacionControllerTest` contra la base real |
-| Panel | **82 pruebas Vitest** (68 antes; 14 nuevas en `sedes/reglas.test.ts`); `tsc` y build correctos |
+| Backend | **310 pruebas, 0 fallos** (283 antes): 7 en `UbicacionControllerTest` y 5 en `ProyectoControllerTest` (base real), 5 en `PuntualidadEntradaTest`, 1 nueva en `AsistenciaControllerTest` (puntualidad en la consulta), y 6 en `GeocodificacionServiceTest` y 3 en `GeocodificacionControllerTest` (sin internet) |
+| Panel | **102 pruebas Vitest** (68 antes; 14 en `sedes/reglas.test.ts`, 8 en `servicios/reglas.test.ts`, 7 en `asistencia/puntualidad.test.ts` y 5 en `utilidades/direccion.test.ts`); `tsc` y build correctos |
+| Recorrido manual local de puntualidad y dirección (CP-M10) | Correcto con marcaciones reales de la base local: la entrada de las 08:02 sale «En tolerancia +2 min» y la de las 09:45 «Tarde 105 min tarde» (turno 08:00, tolerancia 10 min); salidas, refrigerios y la marcación sin asignación muestran un guion; el detalle explica la regla y muestra el turno; la dirección del punto sale arriba, tanto en el detalle como en el formulario de la sede, donde un punto en Callao dio «Avenida El Olivar 1259, Jorge Chavez, Callao» y «Usar como referencia» la copió al campo. El navegador solo llamó a `/api/geocodificacion/inversa` (nuestro servidor) |
+| Recorrido manual local de servicios (CP-M09) | Correcto: el formulario vacío y un fin anterior al inicio se rechazan con su mensaje; se registra un servicio; editar sin cambios avisa y renombrar lo guarda; eliminar un servicio que tiene una sede se rechaza con «desactívelo en su lugar»; eliminar uno sin historial funciona y desaparece de la lista; lo mismo con una sede sin asignaciones |
 | Recorrido manual local (CP-M08) | Correcto contra el backend y PostGIS locales: el mapa carga con calles; un clic coloca el marcador y llena latitud y longitud; el radio mueve el círculo en vivo; pegar «-12.046374, -77.042793» reubica el marcador y encuadra el mapa; al guardar, la sede aparece en la tabla con su centro y radio; *Editar zona* se abre con la zona guardada y el servicio bloqueado; arrastrar el marcador y guardar dejó el nuevo punto en PostGIS y las entradas `CREACION` y `MODIFICACION` en la bitácora |
 
 **Brechas**
 - **No se reprodujo el fallo original** («se marcaba una zona pero no se registraba»): el almacenamiento funciona, pero no se tiene el caso exacto de la pantalla antigua.
-- **CP-M08 no cubrió en el navegador** desactivar ni reactivar (sí las pruebas de integración) ni el arrastre con pantalla táctil ni el uso de «Usar mi ubicación».
-- **El mapa no se probó bajo la CSP del proxy en desarrollo** (allí no hay CSP); se comprobó después en producción, ver 9.10.1. Queda pendiente el recorrido completo con sesión iniciada (CP-X08).
-- **Datos de prueba:** quedaron en la base local de desarrollo el servicio «Servicio Prueba Zona» y la sede «Almacén Norte»; sus entradas de bitácora se conservan por diseño.
+- **La dirección depende de OpenStreetMap.** La prueba manual llamó al servicio real desde el backend local; el despliegue necesita que la VM tenga salida HTTPS a `nominatim.openstreetmap.org` (se verificará en CP-X09). En el centro de Lima el servicio devolvió solo «Lima».
+- **La puntualidad en turnos nocturnos no se probó con datos reales** (solo con la prueba unitaria); no hay turnos que crucen la medianoche cargados.
+- **No se recorrió en el navegador** desactivar ni reactivar (sí las pruebas de integración) ni el arrastre con pantalla táctil ni el uso de «Usar mi ubicación».
+- **Datos de prueba:** quedó en la base local de desarrollo el servicio «Servicio Prueba Zona» (la sede «Almacén Norte» y «Servicio Borrable» se eliminaron en la prueba); las entradas de bitácora se conservan por diseño.
+- **El mapa bajo la CSP del proxy** se comprobó después en producción (ver 9.10.1); queda pendiente el recorrido completo con sesión iniciada (CP-X08).
 
 #### 9.10.1 Despliegue en la VM de Azure (5-nov-2026, `03b8af9`)
 

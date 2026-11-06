@@ -11,6 +11,8 @@ import com.clickclak.backend.model.Ubicacion;
 public interface UbicacionRepository extends JpaRepository<Ubicacion, Long> {
     List<Ubicacion> findByProyectoId(Long proyectoId);
 
+    boolean existsByProyectoId(Long proyectoId);
+
     /**
      * Distancia en metros entre la ubicación y un punto dado, calculada con PostGIS
      * (ST_Distance sobre geography). Se pasan latitud/longitud como escalares en vez de

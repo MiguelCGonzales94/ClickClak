@@ -16,7 +16,11 @@ export const servicioUbicaciones = {
     clienteApi.put<RespuestaUbicacion>(`/api/ubicaciones/${id}`, solicitud, token),
 
   /** Baja lógica; el servidor responde 409 si la sede tiene asignaciones en curso o programadas. */
-  desactivar: (token: string, id: number) => clienteApi.delete<RespuestaUbicacion>(`/api/ubicaciones/${id}`, token),
+  desactivar: (token: string, id: number) =>
+    clienteApi.post<RespuestaUbicacion>(`/api/ubicaciones/${id}/desactivar`, {}, token),
+
+  /** Borrado físico, solo si ninguna asignación usó la sede; si no, 409. */
+  eliminar: (token: string, id: number) => clienteApi.delete<void>(`/api/ubicaciones/${id}`, token),
 
   reactivar: (token: string, id: number) =>
     clienteApi.post<RespuestaUbicacion>(`/api/ubicaciones/${id}/reactivar`, {}, token),

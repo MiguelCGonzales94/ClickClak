@@ -17,6 +17,7 @@ import com.clickclak.backend.dto.EditarUbicacionRequest;
 import com.clickclak.backend.dto.RegistrarUbicacionRequest;
 import com.clickclak.backend.exception.OperacionNoPermitidaException;
 import com.clickclak.backend.exception.RecursoNoEncontradoException;
+import com.clickclak.backend.exception.SolicitudInvalidaException;
 import com.clickclak.backend.model.AccionAuditoria;
 import com.clickclak.backend.model.Proyecto;
 import com.clickclak.backend.model.Ubicacion;
@@ -58,6 +59,9 @@ public class UbicacionService {
     public Ubicacion registrarUbicacion(RegistrarUbicacionRequest solicitud, Long actorId) {
         Proyecto proyecto = proyectoRepository.findById(solicitud.proyectoId())
                 .orElseThrow(() -> new RecursoNoEncontradoException("Proyecto no encontrado: " + solicitud.proyectoId()));
+        if (!proyecto.isActivo()) {
+            throw new SolicitudInvalidaException("El servicio " + proyecto.getNombre() + " está desactivado: reactívelo para agregarle sedes");
+        }
 
         Ubicacion ubicacion = ubicacionRepository.save(Ubicacion.builder()
                 .proyecto(proyecto)
@@ -116,6 +120,23 @@ public class UbicacionService {
         ubicacionRepository.save(ubicacion);
         auditar(actorId, ubicacion, AccionAuditoria.MODIFICACION, anterior, capturarEstado(ubicacion));
         return ubicacion;
+    }
+
+    /**
+     * Borrado físico, solo si ninguna asignación (ni siquiera una quitada) usó la sede: las marcaciones
+     * cuelgan de las asignaciones y borrarla rompería la trazabilidad. Con historial, la salida es desactivar.
+     */
+    @Transactional
+    public void eliminarUbicacion(Long ubicacionId, Long actorId) {
+        Ubicacion ubicacion = cargar(ubicacionId);
+        if (asignacionRepository.existsByUbicacionId(ubicacionId)) {
+            throw new OperacionNoPermitidaException(
+                    "La sede tiene asignaciones registradas y no se puede eliminar: desactívela en su lugar");
+        }
+        Map<String, Object> anterior = capturarEstado(ubicacion);
+        ubicacionRepository.delete(ubicacion);
+        ubicacionRepository.flush();
+        auditar(actorId, ubicacion, AccionAuditoria.ELIMINACION, anterior, null);
     }
 
     @Transactional(readOnly = true)

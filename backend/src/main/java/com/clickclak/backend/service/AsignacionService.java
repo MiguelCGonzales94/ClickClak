@@ -76,6 +76,8 @@ public class AsignacionService {
         Ubicacion ubicacion = cargarUbicacion(solicitud.ubicacionId());
         Horario horario = cargarHorario(solicitud.horarioId());
 
+        exigirProyectoActivo(proyecto);
+        exigirUbicacionActiva(ubicacion);
         validarSedeDelProyecto(ubicacion, proyecto);
         validarSinConflicto(usuario, ubicacion, solicitud.fechaInicio(), solicitud.fechaFin(), null);
 
@@ -98,6 +100,14 @@ public class AsignacionService {
         Ubicacion ubicacion = cargarUbicacion(solicitud.ubicacionId());
         Horario horario = cargarHorario(solicitud.horarioId());
 
+        // Una asignación que ya usa un servicio o sede desactivados puede seguir editándose (turno, fechas);
+        // lo que no se permite es elegir uno inactivo.
+        if (!proyecto.getId().equals(asignacion.getProyecto().getId())) {
+            exigirProyectoActivo(proyecto);
+        }
+        if (!ubicacion.getId().equals(asignacion.getUbicacion().getId())) {
+            exigirUbicacionActiva(ubicacion);
+        }
         validarSedeDelProyecto(ubicacion, proyecto);
         validarSinConflicto(asignacion.getUsuario(), ubicacion, solicitud.fechaInicio(), solicitud.fechaFin(),
                 asignacion.getId());
@@ -155,6 +165,10 @@ public class AsignacionService {
         Proyecto proyecto = solicitud.proyectoId() != null ? cargarProyecto(solicitud.proyectoId()) : actual.getProyecto();
         Ubicacion ubicacion = cargarUbicacion(solicitud.ubicacionId());
         Horario horario = solicitud.horarioId() != null ? cargarHorario(solicitud.horarioId()) : actual.getHorario();
+        if (!proyecto.getId().equals(actual.getProyecto().getId())) {
+            exigirProyectoActivo(proyecto);
+        }
+        exigirUbicacionActiva(ubicacion);
         validarSedeDelProyecto(ubicacion, proyecto);
         // La actual ya no cuenta para el cruce de fechas de la sede nueva: se está dejando.
         validarSinConflicto(actual.getUsuario(), ubicacion, fechaCambio, actual.getFechaFin(), actual.getId());
@@ -250,6 +264,18 @@ public class AsignacionService {
     private Ubicacion cargarUbicacion(Long id) {
         return ubicacionRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Ubicación no encontrada: " + id));
+    }
+
+    private void exigirProyectoActivo(Proyecto proyecto) {
+        if (!proyecto.isActivo()) {
+            throw new SolicitudInvalidaException("El servicio " + proyecto.getNombre() + " está desactivado");
+        }
+    }
+
+    private void exigirUbicacionActiva(Ubicacion ubicacion) {
+        if (!ubicacion.isActivo()) {
+            throw new SolicitudInvalidaException("La sede " + ubicacion.getNombre() + " está desactivada");
+        }
     }
 
     private Horario cargarHorario(Long id) {

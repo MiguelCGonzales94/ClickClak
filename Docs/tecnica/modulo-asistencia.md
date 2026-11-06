@@ -44,14 +44,35 @@ Las explicaciones salen de `MotorValidacionContextualService` y se muestran en l
 
 El umbral de 500 m es hoy un parámetro de negocio **pendiente de calibrar** con datos reales; si cambia, hay que actualizar el texto de `frontend-admin/src/asistencia/reglas.ts`.
 
+### 3.1 Puntualidad de las entradas (5-nov-2026)
+
+Además del estado de validación (dónde), cada **entrada con turno asignado** se clasifica por cuándo llegó respecto del inicio del turno. Es una columna aparte: una marcación puede ser `VALIDO` en lugar y llegar `TARDE`.
+
+| Puntualidad | Cuándo | En la lista |
+|---|---|---|
+| `TEMPRANO` | Antes de la hora de inicio | «Temprano · 15 min antes» |
+| `DENTRO_DE_TOLERANCIA` | Desde la hora de inicio hasta el fin de la tolerancia del turno, inclusive | «En tolerancia · A la hora» o «+7 min» |
+| `TARDE` | Pasada la tolerancia | «Tarde · 11 min tarde» |
+
+- **Decisión: es la misma regla con la que se genera la incidencia de tardanza** (inicio más tolerancia del turno), así la columna y las incidencias no se contradicen. Los minutos se cuentan desde la hora de inicio, no desde el fin de la tolerancia.
+- **Decisión: solo las entradas.** Salidas, refrigerios y marcaciones `SIN_ASIGNACION` (no hay turno contra el cual comparar) muestran un guion; el detalle dice cuál es el motivo.
+- **Decisión: la hora se compara en Lima**, que es donde trabaja el personal.
+- **Límite: turnos que cruzan la medianoche.** La puntualidad toma la diferencia por el camino más corto (una entrada a las 00:10 de un turno de 22:00 es tardía por 2 h 10 min). El motor de validación contextual no hace ese ajuste, así que en esos turnos la tardanza mostrada puede no tener incidencia automática. No hay turnos así cargados hoy.
+- **Límite: no hay filtro por puntualidad.** Se ve en la columna y en el detalle; filtrar exigiría comparar la hora local con el turno dentro de la consulta. **Recomendación:** agregarlo si supervisión lo pide.
+- **Datos:** `GET /api/marcaciones` suma `puntualidad`, `minutosRespectoAlInicio` (negativo si llegó antes), `turno`, `horaInicioTurno` y `toleranciaTurnoMinutos`.
+
+### 3.2 Dirección del punto marcado
+
+El detalle de la marcación muestra, arriba, la **dirección aproximada** del punto («Avenida El Olivar 1259, Jorge Chavez, Callao»). Se obtiene del servidor (`GET /api/geocodificacion/inversa`), que consulta a OpenStreetMap; ver [modulo-zonificacion-sedes.md](modulo-zonificacion-sedes.md), sección 2. No se guarda: se calcula al abrir el detalle y es solo una ayuda para leer las coordenadas.
+
 ## 4. Pantalla
 
 Sección **Asistencia** del panel, visible para SUPERVISOR y RRHH_ADMIN.
 
 - **Fechas:** arranca en el día de hoy (Lima), con atajos *Hoy*, *Ayer* y *Últimos 7 días*. Un rango invertido se avisa en pantalla sin pedirlo al servidor.
 - **Resumen:** una etiqueta por estado con su cantidad; al pulsarla filtra la lista. Muestra cuántas marcaciones están *por revisar* (observadas, fuera de tolerancia y sospechosas).
-- **Lista:** persona, evento, hora, sede y proyecto, estado, distancia y sincronización, con paginación y botón *Ver detalle*.
-- **Detalle:** todos los datos de la marcación, la explicación del estado y un enlace a OpenStreetMap con las coordenadas.
+- **Lista:** persona, evento, hora, **puntualidad**, sede y proyecto, estado, distancia y sincronización, con paginación y botón *Ver detalle*. Al pasar el cursor sobre la puntualidad sale la explicación con el turno y su tolerancia.
+- **Detalle:** la dirección del punto marcado, todos los datos de la marcación (incluidos el turno y la puntualidad con su explicación), la explicación del estado y un enlace a OpenStreetMap con las coordenadas.
 - **Persona:** lista a todos los usuarios y marca el rol de quien no es colaborador, porque cualquier usuario autenticado puede marcar su propia asistencia.
 
 **Decisión de presentación:** la sincronización se muestra como *Inmediata* si tardó menos de un minuto y destacada en ámbar si tardó más. Ese minuto es una decisión de la pantalla, no una regla del dominio.
