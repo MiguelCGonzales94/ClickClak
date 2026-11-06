@@ -317,3 +317,17 @@ Descripción, decisiones y límites en [modulo-zonificacion-sedes.md](modulo-zon
 
 **Lo que no prueba.** No se inició sesión en el panel de producción: no se recorrió la pantalla (marcar, arrastrar, guardar, editar, desactivar) con datos reales, que es lo que cubre CP-X08. Se desplegó en horario de la VM encendida a mano: se había apagado a las 23:00 y hubo que volver a encenderla.
 
+#### 9.10.2 Despliegue en la VM de Azure (6-nov-2026, `cc62fe1`)
+
+| Prueba | Resultado |
+|---|---|
+| Fusión | PR #36 (puntualidad, dirección del punto, edición, baja y eliminación de sedes y servicios) con el CI en verde (backend y panel); en el panel, además, `tsc` y 102 pruebas de Vitest correctas en local |
+| Paquete y comparación | `git archive` de `cc62fe1` (SHA-256 `bd26b589…92b71fd`, igual en el equipo y en la VM); el `diff` contra la VM mostró solo backend, panel y documentación, sin cambios de infraestructura. El código anterior quedó en `~/clickclak-prev-before-cc62fe1` |
+| Migración | Ninguna; no se hizo `pg_dump`. Postgres y su réplica no se reiniciaron; se recrearon backend, paneles y proxy |
+| `verificar-despliegue.sh` | **73 comprobaciones correctas, 0 fallos**. Salida en [`evidencia/despliegue-main-2026-11-06-puntualidad.txt`](evidencia/despliegue-main-2026-11-06-puntualidad.txt) |
+| Dirección del punto (CP-X09) | La VM y el contenedor del backend alcanzan `nominatim.openstreetmap.org` por HTTPS y devuelven la dirección de un punto de Lima |
+| Endpoints nuevos | Sin token responden 401: `GET /api/geocodificacion/inversa`, `GET /api/marcaciones`, `POST /api/ubicaciones/{id}/desactivar`, `DELETE /api/ubicaciones/{id}`, `PUT` y `DELETE /api/proyectos/{id}`. La CSP no cambió |
+| Panel publicado | El paquete del panel (puerto 8443) contiene la columna de puntualidad («En tolerancia», «min antes») |
+
+**Lo que no prueba.** No se inició sesión en el panel de producción: falta ver la columna de puntualidad con una entrada real, la dirección del punto en el detalle y el recorrido de editar, desactivar, reactivar y eliminar sedes y servicios con datos reales (CP-X08 y CP-X09). Con la sesión iniciada tampoco se llamaron los endpoints nuevos, solo se comprobó que exigen token.
+
