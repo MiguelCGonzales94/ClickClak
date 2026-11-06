@@ -11,6 +11,7 @@ import {
   sedesVigentesPorTecnico,
 } from "../asignaciones/reglas";
 import { Modal } from "../components/Modal";
+import { soloActivos } from "../servicios/reglas";
 import { Tabla } from "../components/Tabla";
 import { ErrorHttp } from "../services/clienteApi";
 import { servicioAsignaciones } from "../services/servicioAsignaciones";
@@ -221,8 +222,8 @@ export function PaginaAsignaciones() {
           <FormularioAsignacion
             token={token}
             tecnicos={tecnicos}
-            proyectos={proyectos}
-            ubicaciones={ubicaciones}
+            proyectos={soloActivos(proyectos)}
+            ubicaciones={soloActivos(ubicaciones)}
             horarios={horarios}
             tecnicoInicialId={filtroTecnico}
             alCancelar={cerrarDialogo}
@@ -237,8 +238,8 @@ export function PaginaAsignaciones() {
             token={token}
             asignacion={dialogo.asignacion}
             tecnicos={tecnicos}
-            proyectos={proyectos}
-            ubicaciones={ubicaciones}
+            proyectos={soloActivos(proyectos, dialogo.asignacion.proyectoId)}
+            ubicaciones={soloActivos(ubicaciones, dialogo.asignacion.ubicacionId)}
             horarios={horarios}
             alCancelar={cerrarDialogo}
             alGuardar={(guardada) => terminar(`Se guardaron los cambios de ${guardada.nombreUsuario} en ${guardada.nombreUbicacion}.`)}
@@ -251,8 +252,8 @@ export function PaginaAsignaciones() {
           <FormularioMoverAsignacion
             token={token}
             asignacion={dialogo.asignacion}
-            proyectos={proyectos}
-            ubicaciones={ubicaciones}
+            proyectos={soloActivos(proyectos, dialogo.asignacion.proyectoId)}
+            ubicaciones={soloActivos(ubicaciones, dialogo.asignacion.ubicacionId)}
             horarios={horarios}
             hoy={hoy}
             alCancelar={cerrarDialogo}

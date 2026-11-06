@@ -56,8 +56,16 @@ public class UbicacionController {
         return UbicacionResponse.desde(ubicacionService.editarUbicacion(id, solicitud, idAutenticado(authentication)));
     }
 
-    /** Baja lógica; 409 si la sede tiene asignaciones en curso o programadas. */
+    /** Borrado físico, solo si ninguna asignación usó la sede; si no, 409 y se ofrece desactivar. */
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SUPERVISOR', 'RRHH_ADMIN')")
+    public ResponseEntity<Void> eliminar(@PathVariable Long id, Authentication authentication) {
+        ubicacionService.eliminarUbicacion(id, idAutenticado(authentication));
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Baja lógica; 409 si la sede tiene asignaciones en curso o programadas. */
+    @PostMapping("/{id}/desactivar")
     @PreAuthorize("hasAnyRole('SUPERVISOR', 'RRHH_ADMIN')")
     public UbicacionResponse desactivar(@PathVariable Long id, Authentication authentication) {
         return UbicacionResponse.desde(ubicacionService.desactivarUbicacion(id, idAutenticado(authentication)));

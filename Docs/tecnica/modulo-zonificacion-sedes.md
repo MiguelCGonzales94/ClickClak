@@ -1,6 +1,6 @@
-# Zonificación de sedes en el mapa
+# Zonificación de sedes en el mapa y CRUD de sedes y servicios
 
-> HU06. Cambio del 4-nov-2026: antes RRHH debía **escribir a mano la latitud y la longitud** de cada sede y no había forma de corregirla ni de darla de baja. Ahora la zona se marca en un mapa. Las etiquetas siguen la convención del proyecto: **Requerimiento**, **Supuesto**, **Recomendación**, **Decisión**.
+> HU06. Cambio del 4 y 5-nov-2026: antes RRHH debía **escribir a mano la latitud y la longitud** de cada sede y no había forma de corregir ni dar de baja ni una sede ni un servicio. Ahora la zona se marca en un mapa y tanto las sedes como los servicios se editan, desactivan y eliminan. Las etiquetas siguen la convención del proyecto: **Requerimiento**, **Supuesto**, **Recomendación**, **Decisión**.
 
 ## 1. Análisis: qué fallaba
 
@@ -9,7 +9,9 @@
 | 1 | La zona se definía tecleando coordenadas sin verlas en ningún mapa; un signo cambiado o una latitud por longitud dejaba la sede en otro país y nadie lo notaba | `PaginaSedes.tsx` |
 | 2 | El formulario solo exigía que los campos no estuvieran vacíos: no comprobaba rangos ni mostraba dónde caía el punto, y un rechazo del servidor aparecía como un texto genérico bajo el botón | `PaginaSedes.tsx` |
 | 3 | Solo existían *crear* y *listar*: una sede mal ubicada no se podía corregir ni desactivar | `UbicacionController` |
-| 4 | Crear una sede no dejaba rastro en la bitácora | `UbicacionService` |
+| 4 | Crear una sede o un servicio no dejaba rastro en la bitácora | `UbicacionService`, `ProyectoService` |
+| 5 | Los **servicios** tampoco se podían editar, dar de baja ni borrar (un nombre mal escrito quedaba para siempre) | `ProyectoController` |
+| 6 | Desactivar una sede o un servicio no habría servido: ni el servidor ni los selectores de asignaciones ignoraban lo inactivo | `AsignacionService`, panel |
 
 **Lo que se comprobó del reporte «se marcaba una zona pero no se registraba».** El servidor guarda y devuelve la zona correctamente: la prueba nueva `laZonaMarcadaSeGuardaYSeLeeIgualDesdeLaBase` registra una sede, vacía la caché de persistencia, la lee de PostGIS y compara centro y radio; y en el recorrido manual el punto quedó en la base. **No se logró reproducir el fallo original** (no se tiene el caso exacto), de modo que lo anterior descarta el almacenamiento pero no demuestra la causa en la pantalla antigua. Lo que sí cambia es que ahora la zona se ve en el mapa antes de guardar, la pantalla no deja enviar sin una zona válida y tras guardar la sede aparece en la tabla con su centro y radio, que es la comprobación visible de que quedó registrada.
 
@@ -22,35 +24,57 @@
 - **Decisión: se dibujan atenuadas las demás sedes del mismo servicio**, con su nombre al pasar el cursor, para no encimar zonas por descuido.
 - **Decisión: no se puede guardar sin zona.** La pantalla valida nombre, servicio, coordenadas en rango y radio entero antes de enviar y dice cuál es el problema; el servidor valida los rangos por su cuenta.
 - **Decisión: editar no cambia el servicio de la sede.** Si una sede pasa a otro servicio, se registra otra; así las asignaciones y marcaciones históricas no cambian de significado.
-- **Decisión: desactivar es una baja lógica y se rechaza (409) mientras haya asignaciones en curso o programadas en esa sede.** Las ya terminadas no cuentan. La sede se puede reactivar.
+- **Decisión: desactivar es una baja lógica y se rechaza (409) mientras haya asignaciones en curso o programadas en esa sede o servicio.** Las ya terminadas no cuentan. Se puede reactivar.
+- **Decisión: eliminar (borrado físico) solo si nunca se usó**, la misma regla que ya tiene Usuarios. Una **sede** se elimina si ninguna asignación (ni siquiera una quitada) la usó, porque las marcaciones cuelgan de las asignaciones. Un **servicio** se elimina si nunca tuvo sedes ni asignaciones. Con historial el servidor responde 409 y la pantalla ofrece desactivar. Sirve para corregir altas por error.
+- **Decisión: lo desactivado no se puede elegir.** El servidor rechaza (400) crear o mover una asignación hacia una sede o servicio desactivados, y agregar una sede a un servicio desactivado; los selectores del panel solo ofrecen lo activo. Una asignación que ya usa algo desactivado (por ejemplo una finalizada) sigue pudiendo editarse en turno y fechas.
+- **Decisión: editar un servicio cambia nombre, cliente y fechas**; la fecha de fin no puede ser anterior a la de inicio. Se activa o desactiva con endpoints aparte.
 - **Decisión: todo cambio queda en la bitácora** (`ubicacion`: estado anterior y nuevo, y quién lo hizo), incluido el alta.
 
 ## 3. API
 
 Toda la gestión es de `SUPERVISOR` y `RRHH_ADMIN`; un colaborador recibe 403.
 
+**Sedes (`/api/ubicaciones`)**
+
 | Endpoint | Qué hace | Errores |
 |---|---|---|
-| `POST /api/ubicaciones` | Registra una sede (como antes) y ahora deja bitácora | 404 servicio inexistente · 400 coordenadas o radio fuera de rango |
-| `PUT /api/ubicaciones/{id}` | Corrige nombre, referencia, centro y radio; el servicio no cambia | 404 · 400 |
-| `DELETE /api/ubicaciones/{id}` | Baja lógica; devuelve la sede con `activo: false` | 404 · 409 si tiene asignaciones en curso o programadas |
-| `POST /api/ubicaciones/{id}/reactivar` | Vuelve a activarla | 404 |
-| `GET /api/ubicaciones[?proyectoId=]` | Lista (incluye las inactivas, con su estado) | |
+| `POST` | Registra una sede y deja bitácora | 404 servicio inexistente · 400 servicio desactivado, coordenadas o radio fuera de rango |
+| `PUT /{id}` | Corrige nombre, referencia, centro y radio; el servicio no cambia | 404 · 400 |
+| `POST /{id}/desactivar` | Baja lógica; devuelve la sede con `activo: false` | 404 · 409 si tiene asignaciones en curso o programadas |
+| `POST /{id}/reactivar` | Vuelve a activarla | 404 |
+| `DELETE /{id}` | Eliminación definitiva (204) | 404 · 409 si alguna asignación la usó |
+| `GET [?proyectoId=]` | Lista (incluye las inactivas, con su estado) | |
+
+**Servicios (`/api/proyectos`)**
+
+| Endpoint | Qué hace | Errores |
+|---|---|---|
+| `POST` | Registra un servicio y deja bitácora | 400 fin anterior al inicio |
+| `PUT /{id}` | Corrige nombre, cliente y fechas | 404 · 400 |
+| `POST /{id}/desactivar` | Baja lógica | 404 · 409 si tiene asignaciones en curso o programadas |
+| `POST /{id}/reactivar` | Vuelve a activarlo | 404 |
+| `DELETE /{id}` | Eliminación definitiva (204) | 404 · 409 si tuvo sedes o asignaciones |
+| `GET` | Lista | |
+
+**Asignaciones:** crear, editar o mover hacia una sede o servicio desactivados responde 400.
 
 ## 4. Pantalla
 
 Sección **Sedes y servicios** del panel (SUPERVISOR y RRHH_ADMIN).
 
-- **Tabla de sedes** con el centro de la zona, el radio y el estado. Menú por fila: *Editar zona* y *Desactivar*, o *Reactivar* si está inactiva.
+- **Tabla de servicios** con cliente, fechas, número de sedes y estado. Menú por fila: *Editar*, *Desactivar* y *Eliminar*, o *Reactivar* si está inactivo. «+ Nuevo servicio» abre un cuadro de diálogo.
+- **Tabla de sedes** con el centro de la zona, el radio y el estado. Menú por fila: *Editar zona*, *Desactivar* y *Eliminar*, o *Reactivar* si está inactiva.
 - **Nueva sede / Editar zona:** un cuadro con el mapa. Al editar se abre encuadrado sobre la zona guardada, con el servicio bloqueado, y avisa si no hay cambios.
-- **Desactivar** explica que las marcaciones ya hechas se conservan y que, si hay técnicos asignados, hay que moverlos o quitarlos antes; si el servidor rechaza, muestra su mensaje.
+- **Desactivar y Eliminar** piden confirmación y la explican (desactivar conserva lo registrado y se puede deshacer; eliminar es definitivo y solo procede si nunca se usó). Si el servidor rechaza, muestra su mensaje dentro del mismo cuadro.
 
 ## 5. Pruebas
 
 | Capa | Pruebas | Qué cubren |
 |---|---|---|
-| `UbicacionControllerTest` (base real) | 5 | La zona marcada se guarda y se lee igual (y `ST_Distance` al centro da menos de 1 m), editar mueve centro y radio y deja bitácora, coordenadas y radio fuera de rango y sede inexistente, desactivar con y sin asignaciones y reactivar, permisos |
+| `UbicacionControllerTest` (base real) | 7 | La zona marcada se guarda y se lee igual (y `ST_Distance` al centro da menos de 1 m), editar mueve centro y radio y deja bitácora, coordenadas y radio fuera de rango y sede inexistente, desactivar con y sin asignaciones y reactivar, eliminar con y sin historial (una asignación quitada cuenta), servicio desactivado, permisos |
+| `ProyectoControllerTest` (base real) | 5 | Alta y edición con bitácora y validación de fechas, desactivar con y sin asignaciones en curso, eliminar con y sin sedes, rechazo de asignar a una sede o servicio desactivados, permisos |
 | Panel (`sedes/reglas.test.ts`) | 14 | Lectura de coordenadas pegadas, formato y redondeo, radio, validación del formulario, detección de cambios, sedes vecinas y encuadre del mapa |
+| Panel (`servicios/reglas.test.ts`) | 8 | Validación del formulario de servicios, fechas, detección de cambios y el filtro de lo activo para los selectores |
 | Navegador (CP-M08) | recorrido manual | Ver `resultados-de-pruebas.md`, 9.10 |
 
 ## 6. Despliegue y límites
