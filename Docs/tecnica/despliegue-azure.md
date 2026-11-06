@@ -188,6 +188,8 @@ Insumo para la retrospectiva del Sprint 4:
 
 **Quinto despliegue (5-nov-2026).** `03b8af9` (zonificación de sedes en el mapa, PR #34, y la documentación del PR #33), **sin migración**: no se hizo `pg_dump` porque el esquema no cambia, y Postgres y su réplica no se reiniciaron. Se comparó la VM con el paquete con `diff` y el código anterior quedó en `~/clickclak-prev-before-03b8af9`. **El proxy se recreó** para tomar la CSP nueva (`img-src` admite `https://tile.openstreetmap.org`). `verificar-despliegue.sh`: **73 comprobaciones correctas** ([`evidencia/despliegue-main-2026-11-05-zonificacion.txt`](evidencia/despliegue-main-2026-11-05-zonificacion.txt)). La VM se había apagado a las 23:00 y se encendió a mano para desplegar.
 
+**Sexto despliegue (6-nov-2026).** `cc62fe1` (PR #36: puntualidad de las entradas, dirección del punto, editar, baja y eliminación de sedes y servicios), **sin migración** ni cambios de infraestructura. Se comparó la VM con el paquete con `diff` y el código anterior quedó en `~/clickclak-prev-before-cc62fe1`. `desplegar.sh` recreó backend, paneles y proxy; Postgres y su réplica no se reiniciaron. `verificar-despliegue.sh`: **73 comprobaciones correctas** ([`evidencia/despliegue-main-2026-11-06-puntualidad.txt`](evidencia/despliegue-main-2026-11-06-puntualidad.txt)). El backend alcanza `nominatim.openstreetmap.org` por HTTPS.
+
 ## 7. Cómo recrearla
 
 Preparación de la suscripción (una sola vez): registrar los proveedores `Microsoft.Compute`, `Microsoft.Network`, `Microsoft.Storage` y `Microsoft.DevTestLab`.
