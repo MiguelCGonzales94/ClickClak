@@ -62,6 +62,11 @@ public class ManejadorGlobalExcepciones extends ResponseEntityExceptionHandler {
         return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
     }
 
+    @ExceptionHandler(ServicioExternoNoDisponibleException.class)
+    public ResponseEntity<Map<String, String>> servicioExternoNoDisponible(ServicioExternoNoDisponibleException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler(OperacionNoPermitidaException.class)
     public ResponseEntity<Map<String, String>> operacionNoPermitida(OperacionNoPermitidaException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));

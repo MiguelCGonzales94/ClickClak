@@ -143,7 +143,16 @@ export interface RespuestaAsistencia {
   ubicacion: string | null;
   radioToleranciaMetros: number | null;
   dispositivo: string | null;
+  /** Solo en entradas con turno asignado; null en el resto. */
+  puntualidad: EstadoPuntualidad | null;
+  /** Negativo si llegó antes de la hora de inicio; 0 o positivo si llegó a la hora o después. */
+  minutosRespectoAlInicio: number | null;
+  turno: string | null;
+  horaInicioTurno: string | null;
+  toleranciaTurnoMinutos: number | null;
 }
+
+export type EstadoPuntualidad = "TEMPRANO" | "DENTRO_DE_TOLERANCIA" | "TARDE";
 
 export interface RespuestaResumenAsistencia {
   total: number;

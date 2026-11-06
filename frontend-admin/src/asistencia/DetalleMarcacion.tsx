@@ -1,7 +1,10 @@
 import type { ReactNode } from "react";
 import type { RespuestaAsistencia } from "../types/api";
 import { formatearFechaHora } from "../utilidades/fechas";
+import { DireccionPunto } from "../components/DireccionPunto";
 import { PillEstadoValidacion } from "./PillEstadoValidacion";
+import { PillPuntualidad } from "./PillPuntualidad";
+import { explicarPuntualidad } from "./puntualidad";
 import {
   describirRetraso,
   etiquetaTipo,
@@ -31,6 +34,10 @@ export function DetalleMarcacion({ marcacion }: { marcacion: RespuestaAsistencia
         <p className="mt-2 text-sm text-texto">{explicacionEstado(marcacion.estadoValidacion)}</p>
       </div>
 
+      {tieneCoordenadas && (
+        <DireccionPunto latitud={marcacion.latitud} longitud={marcacion.longitud} etiqueta="Dirección del punto marcado" />
+      )}
+
       <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Dato etiqueta="Persona">{marcacion.nombreUsuario}</Dato>
         <Dato etiqueta="Evento">{etiquetaTipo(marcacion.tipoEvento)}</Dato>
@@ -40,6 +47,21 @@ export function DetalleMarcacion({ marcacion }: { marcacion: RespuestaAsistencia
           <span className={`ml-2 text-xs ${seSincronizoDespues(marcacion) ? "text-advertenciaTexto" : "text-textoSuave"}`}>
             {describirRetraso(marcacion.retrasoSincronizacionSegundos)}
           </span>
+        </Dato>
+        <Dato etiqueta="Puntualidad">
+          {marcacion.puntualidad !== null && marcacion.minutosRespectoAlInicio !== null ? (
+            <>
+              <PillPuntualidad marcacion={marcacion} />
+              <span className="mt-1 block text-xs text-textoSuave">{explicarPuntualidad(marcacion)}</span>
+            </>
+          ) : (
+            <span className="text-textoSuave">
+              {marcacion.tipoEvento !== "ENTRADA" ? "Solo se mide en las entradas" : "Sin turno asignado"}
+            </span>
+          )}
+        </Dato>
+        <Dato etiqueta="Turno">
+          {marcacion.turno ? `${marcacion.turno} · desde las ${marcacion.horaInicioTurno}` : "—"}
         </Dato>
         <Dato etiqueta="Sede">{marcacion.ubicacion ?? "Sin asignación vigente"}</Dato>
         <Dato etiqueta="Proyecto">{marcacion.proyecto ?? "—"}</Dato>
@@ -68,7 +90,8 @@ export function DetalleMarcacion({ marcacion }: { marcacion: RespuestaAsistencia
 
       {tieneCoordenadas && (
         <p className="text-xs text-textoSuave">
-          «Ver en el mapa» abre un sitio externo (OpenStreetMap) con las coordenadas de esta marcación.
+          «Ver en el mapa» abre un sitio externo (OpenStreetMap) con las coordenadas de esta marcación. La dirección es
+          aproximada y la obtiene OpenStreetMap a partir de esas coordenadas; no se guarda.
         </p>
       )}
     </div>

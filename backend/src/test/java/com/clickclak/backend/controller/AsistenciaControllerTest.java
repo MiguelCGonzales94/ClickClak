@@ -267,6 +267,33 @@ class AsistenciaControllerTest {
         }
     }
 
+    @Test
+    void listar_clasificaLaPuntualidadDeLasEntradasContraElTurno() throws Exception {
+        Usuario admin = crearUsuario("asis.admin.punt@example.com", Rol.RRHH_ADMIN, "Ada", "Admin", "92000091");
+        Escenario e = crearEscenario("asis.col.punt@example.com", "92000092", "Proyecto Puntual", "Sede Puntual");
+        // Turno de 08:00 con 10 minutos de tolerancia; Lima es UTC-5, así que 13:00Z son las 08:00.
+        marcar(e, TipoEvento.ENTRADA, Instant.parse("2020-01-15T12:45:00Z"), EstadoValidacion.VALIDO, "5.00");
+        marcar(e, TipoEvento.ENTRADA, Instant.parse("2020-01-16T13:10:00Z"), EstadoValidacion.VALIDO, "5.00");
+        marcar(e, TipoEvento.ENTRADA, Instant.parse("2020-01-17T13:11:00Z"), EstadoValidacion.VALIDO, "5.00");
+        marcar(e, TipoEvento.SALIDA, Instant.parse("2020-01-17T22:00:00Z"), EstadoValidacion.VALIDO, "5.00");
+
+        // Más reciente primero: salida del 17, entrada tardía del 17, entrada del 16 y entrada del 15.
+        mockMvc.perform(get("/api/marcaciones").param("proyectoId", e.proyecto().getId().toString())
+                        .header("Authorization", bearer(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contenido[0].tipoEvento").value("SALIDA"))
+                .andExpect(jsonPath("$.contenido[0].puntualidad").doesNotExist())
+                .andExpect(jsonPath("$.contenido[1].puntualidad").value("TARDE"))
+                .andExpect(jsonPath("$.contenido[1].minutosRespectoAlInicio").value(11))
+                .andExpect(jsonPath("$.contenido[2].puntualidad").value("DENTRO_DE_TOLERANCIA"))
+                .andExpect(jsonPath("$.contenido[2].minutosRespectoAlInicio").value(10))
+                .andExpect(jsonPath("$.contenido[3].puntualidad").value("TEMPRANO"))
+                .andExpect(jsonPath("$.contenido[3].minutosRespectoAlInicio").value(-15))
+                .andExpect(jsonPath("$.contenido[3].horaInicioTurno").value("08:00"))
+                .andExpect(jsonPath("$.contenido[3].toleranciaTurnoMinutos").value(10))
+                .andExpect(jsonPath("$.contenido[3].turno").value("Turno asis.col.punt@example.com"));
+    }
+
     private String bearer(Usuario usuario) {
         return "Bearer " + jwtService.generarToken(usuario);
     }

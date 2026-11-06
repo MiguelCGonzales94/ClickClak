@@ -16,6 +16,7 @@ import {
 } from "../asistencia/reglas";
 import { Modal } from "../components/Modal";
 import { Tabla } from "../components/Tabla";
+import { PillPuntualidad } from "../asistencia/PillPuntualidad";
 import { ErrorHttp } from "../services/clienteApi";
 import { servicioAsistencia } from "../services/servicioAsistencia";
 import { servicioUbicaciones } from "../services/servicioUbicaciones";
@@ -244,7 +245,7 @@ export function PaginaAsistencia() {
               ? "Corrija el rango de fechas para ver la asistencia."
               : "No hay marcaciones para los filtros elegidos."
           }
-          columnas={["Persona", "Evento", "Hora", "Sede", "Estado", "Distancia", "Sincronización", ""]}
+          columnas={["Persona", "Evento", "Hora", "Puntualidad", "Sede", "Estado", "Distancia", "Sincronización", ""]}
           filas={(errorRango ? [] : (resultado?.contenido ?? [])).map((marcacion) => [
             <span key="persona" className="font-medium">
               {marcacion.nombreUsuario}
@@ -255,6 +256,7 @@ export function PaginaAsistencia() {
             <span key="hora" className="whitespace-nowrap text-textoSuave">
               {formatearFechaHora(marcacion.horaEvento)}
             </span>,
+            <PillPuntualidad key="puntualidad" marcacion={marcacion} />,
             <div key="sede">
               <p>{marcacion.ubicacion ?? <span className="text-textoSuave">Sin asignación</span>}</p>
               {marcacion.proyecto && <p className="text-xs text-textoSuave">{marcacion.proyecto}</p>}

@@ -1,5 +1,6 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { Campo } from "../components/Campo";
+import { DireccionPunto } from "../components/DireccionPunto";
 import { ErrorHttp } from "../services/clienteApi";
 import { servicioUbicaciones } from "../services/servicioUbicaciones";
 import type { RespuestaProyecto, RespuestaUbicacion } from "../types/api";
@@ -158,6 +159,12 @@ export function FormularioSede({ token, sede, proyectos, ubicaciones, alGuardar,
             Usar mi ubicación
           </button>
         </div>
+        <DireccionPunto
+          latitud={punto?.latitud ?? null}
+          longitud={punto?.longitud ?? null}
+          etiqueta="Dirección del punto"
+          alUsar={(direccion) => cambiar({ direccionReferencia: direccion.slice(0, 255) })}
+        />
         <p className="text-xs text-textoSuave">
           Haga clic en el mapa para colocar el centro y arrastre el marcador para afinarlo. El círculo es la zona donde
           se acepta una marcación.

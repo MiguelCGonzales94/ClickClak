@@ -4,8 +4,10 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 
+import com.clickclak.backend.model.EstadoPuntualidad;
 import com.clickclak.backend.model.EstadoValidacion;
 import com.clickclak.backend.model.Marcacion;
+import com.clickclak.backend.model.PuntualidadEntrada;
 import com.clickclak.backend.model.TipoEvento;
 
 /**
@@ -31,7 +33,12 @@ public record AsistenciaResponse(
     String proyecto,
     String ubicacion,
     Integer radioToleranciaMetros,
-    String dispositivo
+    String dispositivo,
+    EstadoPuntualidad puntualidad,
+    Long minutosRespectoAlInicio,
+    String turno,
+    String horaInicioTurno,
+    Integer toleranciaTurnoMinutos
 ) {
     /** Debe llamarse dentro de una transacción o con las asociaciones ya cargadas (ver {@code conDetalle}). */
     public static AsistenciaResponse desde(Marcacion marcacion) {
@@ -40,6 +47,11 @@ public record AsistenciaResponse(
         var proyecto = asignacion != null ? asignacion.getProyecto() : null;
         var usuario = marcacion.getUsuario();
         var geom = marcacion.getGeom();
+        var horario = asignacion != null ? asignacion.getHorario() : null;
+        // La puntualidad solo se mide en las entradas que tienen turno contra el cual compararse.
+        var puntualidad = horario != null && marcacion.getTipoEvento() == TipoEvento.ENTRADA && marcacion.getHoraEvento() != null
+                ? PuntualidadEntrada.clasificar(marcacion.getHoraEvento(), horario)
+                : null;
         long retraso = marcacion.getHoraEvento() != null && marcacion.getHoraSincronizacion() != null
                 ? Math.max(0, Duration.between(marcacion.getHoraEvento(), marcacion.getHoraSincronizacion()).toSeconds())
                 : 0;
@@ -60,7 +72,12 @@ public record AsistenciaResponse(
             proyecto != null ? proyecto.getNombre() : null,
             ubicacion != null ? ubicacion.getNombre() : null,
             ubicacion != null ? ubicacion.getRadioToleranciaMetros() : null,
-            marcacion.getDispositivo() != null ? marcacion.getDispositivo().getNombreDispositivo() : null
+            marcacion.getDispositivo() != null ? marcacion.getDispositivo().getNombreDispositivo() : null,
+            puntualidad != null ? puntualidad.estado() : null,
+            puntualidad != null ? puntualidad.minutosRespectoAlInicio() : null,
+            horario != null ? horario.getNombre() : null,
+            horario != null ? horario.getHoraInicio().toString() : null,
+            horario != null ? horario.getToleranciaMinutos() : null
         );
     }
 }
