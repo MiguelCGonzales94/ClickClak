@@ -253,7 +253,7 @@ Cierra el hallazgo H-09. PR #29 (backend) y #30 (panel), fusionados y desplegado
 
 ### 9.9 Asignaciones con varias sedes (9-oct-2026)
 
-Descripción, decisiones y límites en [modulo-asignaciones.md](modulo-asignaciones.md). **No se desplegó ni se probó en la VM.**
+Descripción, decisiones y límites en [modulo-asignaciones.md](modulo-asignaciones.md). PR #32, fusionado y desplegado en la VM con `dc1d0ff` (ver 9.9.1).
 
 | Prueba | Resultado |
 |---|---|
@@ -266,5 +266,19 @@ Descripción, decisiones y límites en [modulo-asignaciones.md](modulo-asignacio
 **Hallazgo corregido de paso.** Una asignación ya terminada se mostraba como *Vigente* en el panel y el tablero la contaba como vigente. Se nota ahora porque por primera vez se pueden terminar. Antes de este cambio, además, crear una asignación no dejaba rastro en la bitácora.
 
 **Brechas**
-- **CP-X06, pendiente:** desplegar en la VM y comprobar la migración V4 y los endpoints nuevos. Antes de aplicar V4 conviene un respaldo de la base.
+- **CP-X06, resuelto el 9-oct-2026** (ver 9.9.1). Sigue pendiente el recorrido manual de la pantalla de asignaciones contra producción (CP-X07).
 - La regla de validar contra la sede más cercana no detecta que una persona con dos turnos cruzados debía estar en la otra sede (límite declarado en `modulo-asignaciones.md`).
+
+#### 9.9.1 Despliegue en la VM de Azure (9-oct-2026, `dc1d0ff`)
+
+| Prueba | Resultado |
+|---|---|
+| Fusión | PR #32 con el CI en verde (backend y panel); `main` no había cambiado desde la rama |
+| Respaldo previo | `pg_dump` de la base (50 KB, 13 tablas, la única asignación incluida) en `~/respaldos/clickclak-antes-de-dc1d0ff.sql` de la VM, antes de aplicar V4 |
+| Paquete y comparación | El SHA-256 coincide entre el equipo y la VM; la comparación con `diff` mostró solo los archivos de asignaciones, V4 y documentación. El código anterior quedó en `~/clickclak-prev-before-dc1d0ff` |
+| Migración | Flyway en la **versión 4** (`asignaciones varias sedes`, exitosa); la única restricción de asignaciones es `ex_asignacion_misma_sede_sin_solapamiento`; los datos quedaron intactos (1 asignación, 5 usuarios) |
+| `verificar-despliegue.sh` | **73 comprobaciones correctas, 0 fallos**. Salida en [`evidencia/despliegue-main-2026-10-09-asignaciones.txt`](evidencia/despliegue-main-2026-10-09-asignaciones.txt) |
+| La regla en la base de producción | Dentro de una transacción que se revirtió sin dejar datos: el mismo colaborador con **dos sedes a la vez** se permite, y repetir la **misma sede** con fechas cruzadas se rechaza con `ex_asignacion_misma_sede_sin_solapamiento` |
+| Endpoints en la VM | Sin token 401; el listado devuelve el estado calculado; editar, quitar y mover una asignación inexistente responden 404; mover con cuerpo inválido, 400; la agenda propia y la ruta `/asignaciones` del panel responden 200 |
+
+**Lo que no prueba.** En producción no se crearon, movieron ni quitaron asignaciones reales: para no dejar datos de prueba, esas operaciones se cubrieron con las pruebas automáticas, el recorrido local y la prueba de la regla en la base. Tampoco se probó la validación de una marcación con varias sedes contra el motor real en la VM.
