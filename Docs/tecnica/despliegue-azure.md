@@ -183,6 +183,8 @@ Insumo para la retrospectiva del Sprint 4:
 
 **Tercer despliegue (9-oct-2026).** `8577561` (módulo de asistencia, PR #29 y #30), sin migración: se comparó la VM con el paquete con `diff` (solo difirieron los archivos del módulo) y el código anterior quedó en `~/clickclak-prev-before-8577561`. `verificar-despliegue.sh`: **73 comprobaciones correctas** ([`evidencia/despliegue-main-2026-10-09-asistencia.txt`](evidencia/despliegue-main-2026-10-09-asistencia.txt)).
 
+**Cuarto despliegue (9-oct-2026).** `dc1d0ff` (asignaciones con varias sedes, PR #32), **con migración V4**: antes de aplicarla se hizo un respaldo con `pg_dump` en `~/respaldos/clickclak-antes-de-dc1d0ff.sql`, y se comparó la VM con el paquete con `diff` (solo difirieron los archivos del módulo y la documentación). El código anterior quedó en `~/clickclak-prev-before-dc1d0ff`. `verificar-despliegue.sh`: **73 comprobaciones correctas** ([`evidencia/despliegue-main-2026-10-09-asignaciones.txt`](evidencia/despliegue-main-2026-10-09-asignaciones.txt)). **Para volver atrás** habría que restaurar también el respaldo de la base: V4 relajó una restricción y, una vez que haya técnicos con varias sedes a la vez, la anterior ya no se podría restablecer sobre esos datos.
+
 ## 7. Cómo recrearla
 
 Preparación de la suscripción (una sola vez): registrar los proveedores `Microsoft.Compute`, `Microsoft.Network`, `Microsoft.Storage` y `Microsoft.DevTestLab`.

@@ -1,0 +1,89 @@
+Evidencia de despliegue de ClickClak desde main
+Fecha: 9-oct-2026
+VM: vm-clickclak (Azure, Chile Central)
+Commit desplegado: dc1d0ff24e1d15604b240bf27255bc0f79cce048
+Contenido: asignaciones con varias sedes (PR #32), con migración V4 y respaldo previo de la base
+Comando: sh scripts/verificar-despliegue.sh
+Resultado: 73/73 comprobaciones correctas
+
+== contenedores
+OK     contenedor postgres                                        activo
+OK     contenedor postgres-replica                                activo
+OK     contenedor backend                                         activo
+OK     contenedor frontend-admin                                  activo
+OK     contenedor frontend-campo                                  activo
+OK     contenedor proxy                                           activo
+== proxy (curl -k para probar por localhost)
+OK     HTTP 80 redirige a HTTPS                                   301
+OK     HTTPS 443: app de campo                                    200
+OK     HTTPS 8443: panel administrativo                           200
+OK     API sin token (443)                                        401
+OK     API sin token (8443)                                       401
+OK     Login en 8443 pasa CORS y rechaza credenciales malas       401
+== acceso real con el administrador inicial
+OK     login del administrador                                    correcto
+OK     rol devuelto                                               RRHH_ADMIN
+OK     GET /api/auth/yo con token                                 200
+OK     GET /api/incidencias con token                             200
+OK     GET /api/incidencias/mias con token                        200
+OK     GET /api/usuarios con token                                200
+== gestión de usuarios (detalle en scripts/verificar-usuarios.sh)
+OK     el administrador crea un supervisor temporal               201
+OK     su estado de cuenta es ACTIVA                              ACTIVA
+OK     la búsqueda paginada lo encuentra                         200
+OK     la búsqueda devuelve exactamente 1 resultado              1
+OK     el usuario inicia sesión con su clave                     200
+OK     con su sesión abierta puede listar usuarios               200
+OK     restablecer la clave devuelve la temporal                  200
+OK     la temporal viaja con Cache-Control: no-store              1
+OK     la clave temporal tiene 12 caracteres                      12
+OK     su estado pasa a CLAVE_PENDIENTE                           CLAVE_PENDIENTE
+OK     la sesión que ya tenía queda limitada (403)              403
+OK     el 403 indica CLAVE_PENDIENTE                              CLAVE_PENDIENTE
+OK     aun así puede consultar su perfil                         200
+OK     la clave anterior ya no sirve para entrar                  401
+OK     entra con la temporal y se le avisa                        true
+OK     el administrador lo desactiva con motivo                   200
+OK     su estado pasa a INACTIVA                                  INACTIVA
+OK     su token vigente deja de servir de inmediato               401
+OK     el administrador no puede eliminarse a sí mismo           409
+OK     sin historial, el usuario temporal se elimina              204
+OK     y ya no existe                                             404
+== seguridad web (cabeceras, superficie expuesta y límites)
+OK     [443] X-Content-Type-Options: nosniff                      presente
+OK     [443] X-Frame-Options: DENY                                presente
+OK     [443] Content-Security-Policy con default-src 'self'       presente
+OK     [443] Referrer-Policy                                      presente
+OK     [443] Permissions-Policy limita sensores                   presente
+OK     [443] el servidor no revela su versión                    presente
+OK     [8443] X-Content-Type-Options: nosniff                     presente
+OK     [8443] X-Frame-Options: DENY                               presente
+OK     [8443] Content-Security-Policy con default-src 'self'      presente
+OK     [8443] Referrer-Policy                                     presente
+OK     [8443] Permissions-Policy limita sensores                  presente
+OK     [8443] el servidor no revela su versión                   presente
+OK     HSTS acorde al certificado (esperado: presente)            presente
+OK     API sin cabeceras duplicadas (nosniff una sola vez)        1
+OK     Actuator health no se enruta                               404
+OK     Actuator prometheus no se enruta                           404
+OK     Archivo oculto /.env no se sirve                           404
+OK     Carpeta oculta /.git/config no se sirve                    404
+OK     Método TRACE rechazado                                    405
+OK     Error de la API sin detalles internos                      1
+OK     Recuperación de clave: la primera petición pasa          200
+OK     Recuperación de clave: la ráfaga recibe 429              1
+== replicación de Postgres (detalle en scripts/verificar-replicacion.sh)
+OK     la primaria no está en modo réplica                        f
+OK     la réplica está conectada y en streaming                   streaming
+OK     se conecta con el rol replicador                             replicador
+OK     la ranura replica_slot está activa                          t
+OK     retraso de la réplica (0 bytes) dentro de 1 MiB             correcto
+OK     la réplica está en modo recuperación                      t
+OK     la réplica tiene PostGIS                                    postgis
+OK     la réplica rechaza escrituras                               rechazada
+OK     el rol replicador no puede entrar a la base de la aplicación denegado
+OK     una contraseña incorrecta no puede replicar                 rechazada
+OK     una escritura en la primaria aparece en la réplica          marca-1791589064-186443
+OK     las dos bases tienen los mismos roles de la aplicación      3
+
+Verificación completa: todo en orden.
